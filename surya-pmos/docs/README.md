@@ -1,0 +1,89 @@
+# Documentation
+
+The per-subsystem notes are **in Spanish** (`*.es.md`): they are the working record kept while the
+port was made, and translating them would have meant rewriting them from memory rather than
+preserving what was actually measured. They are worth reading even through a translator, because
+they record *how* each thing was found, and the traps that cost the most time.
+
+| File | What it covers |
+|---|---|
+| [`camera.es.md`](camera.es.md) | The camera, from "not a single packet" to autofocus. The root cause was that the sensor transmits in **C-PHY** while the receiver was set to D-PHY |
+| [`audio.es.md`](audio.es.md) | Audio architecture: amplifiers, routing, call path through the DSP |
+| [`bluetooth.es.md`](bluetooth.es.md) | Bluetooth calls: SCO over SLIMBus and offload to the chip |
+| [`notifications.es.md`](notifications.es.md) | Notification sound and vibration — three stacked causes |
+| [`changes.es.md`](changes.es.md) | Every change, patch by patch |
+| [`contacts-search.es.md`](contacts-search.es.md) | The contacts search in Calls froze up to ~25 s per keystroke with 2556 contacts: filter in idle batches, and don't filter below 3 characters |
+| [`pending.es.md`](pending.es.md) | What is still open, and where to start on each |
+| [`deploy.es.md`](deploy.es.md) | How the working state is deployed and verified |
+| [`blobs.md`](blobs.md) | Extracting the vendor firmware from your **own** phone (English) |
+| [`../tools/qmi-loc-idl/`](../tools/qmi-loc-idl/) | Decoding the modem's QMI LOC interface table — all 470 messages (English) |
+
+## Lessons that generalise beyond this phone
+
+A few of these cost days, and none of them are specific to a POCO X3:
+
+- **Matching the factory byte for byte does not prove you are right.** The camera's registers were
+  verified identical to the vendor's for months. They were — including a mode bit nobody had
+  decoded, which said the sensor speaks C-PHY while the receiver was configured for D-PHY.
+- **An I²C ACK does not mean the chip understood you.** The focus actuator accepted every command
+  and moved nothing: right manufacturer, wrong protocol dialect.
+- **A zero proves nothing without a positive control.** Counters read zero for months; the value
+  only became evidence once a test pattern showed the same counters working.
+- **Read the row stride from `bytesused / height`, never from the width.** Padding turns a correct
+  photo into a banding pattern that looks exactly like a broken sensor.
+- **The absence of an error message is not success.** Check the precondition ran at all.
+
+## Added 2026-08-22
+
+| document | what it covers |
+|---|---|
+| [`suspend.es.md`](suspend.es.md) | ★ **Suspend and power votes**: why the phone never slept, `sync_state` that never ran, and the one problem still open. Written to be readable on its own by someone with a different device |
+| [`sleep-fix.es.md`](sleep-fix.es.md) | the full diagnosis behind it: the Bluetooth UART wakeup line that aborted every suspend |
+| [`camss.es.md`](camss.es.md) | everything about `qcom_camss` in one place: boot hang, power votes and camera |
+| [`muted-calls.es.md`](muted-calls.es.md) | intermittent calls where the other side heard nothing: the mic's SoundWire stream registered with **zero ports** |
+| [`call-routing.es.md`](call-routing.es.md) | call routing, per-mode volume and the mute button |
+
+⚠️ These five are in Spanish (`.es.md`) and have no English version yet.
+
+## Added 2026-08-24
+
+| document | what it covers |
+|---|---|
+| [`ufs-freeze.es.md`](ufs-freeze.es.md) | ★ the freeze is the **storage**, not the modem: a reader/writer deadlock in the UFS driver, and how it was caught |
+| [`watchdog.es.md`](watchdog.es.md) | a hardware watchdog that demands the phone **works**, not just that PID 1 lives. ⚠️ it cannot be handed over at runtime — only at boot |
+| [`camss.es.md`](camss.es.md) | everything about `qcom_camss` in one place, now including **who loads the sensors** and why PipeWire has to be told |
+
+## Added 2026-08-25
+
+| document | what it covers |
+|---|---|
+| [`hfp-race.es.md`](hfp-race.es.md) | ★ **Bluetooth calls that come out mute** — three distinct causes with one symptom: a race for the HFP profile registration that only one WirePlumber instance can win; an SCO handshake that gave up one second too early; and the fact that **eSCO is negotiated on the profile transition, not by sitting in the profile**. Not specific to this phone: the registration race can happen anywhere WirePlumber restarts more than once during boot |
+
+⚠️ In Spanish, no English version yet.
+
+## Added 2026-08-26
+
+| document | what it covers |
+|---|---|
+| [`bt-chip-wedged.es.md`](bt-chip-wedged.es.md) | ★ The driver **crashes the Bluetooth controller on purpose** to collect a dump, and on this board it never comes back. What actually kills the machine is touching Bluetooth afterwards. Includes kernel patch 0127 (let the rails discharge before retrying) and — worth reading on any NMI-less ARM64 box — **why freezes here left no trace at all**, and the hardlockup detector that fixes that |
+| [`headset-le-only.es.md`](headset-le-only.es.md) | The headset connects and no card shows up in PipeWire: it attached over **BLE only**, and A2DP/HFP exist solely on BR/EDR. How to tell in two glances, and why the obvious suspect is *not* the cause |
+
+⚠️ In Spanish, no English version yet.
+
+
+## Added 2026-09-11
+
+| document | what it covers |
+|---|---|
+| [`bt-return-to-headset.es.md`](bt-return-to-headset.es.md) | ★ **Moving a call from the speaker back to a Bluetooth headset came back mute both ways.** The SLIMbus satellite controller (`qcom-ngd-ctrl`) drops the channel-removal messages, so the DSP's bus manager never learns the channels are gone and, inside a call, the DSP↔chip link stays dead. Kernel patch 0130 removes them the way the vendor kernel does. Not specific to this phone: any Qualcomm board with `qcom-ngd-ctrl`. Also how it was narrowed down with a two-phone test bench, and the new event-driven headset call supervisor |
+
+⚠️ In Spanish, no English version yet.
+
+
+## Added 2026-09-12
+
+| document | what it covers |
+|---|---|
+| [`echo-cancellation.es.md`](echo-cancellation.es.md) | ★ **Echo cancellation in calls works** (echo ~23 dB down). The vendor's canceller is a **dynamic module loaded by the ADSP's audio PD**, which nothing in mainline served: every topology using it failed its commit until `hexagonrpcd` learned to create and serve that static PD (and the kernel gave the fastrpc channel its remote heap). Also the vendor vocproc sequence, mapping the calibration, a real mute in the DSP and the per-device calibration. The factory calibration itself is not included |
+
+⚠️ In Spanish, no English version yet.

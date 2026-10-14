@@ -1,0 +1,103 @@
+#!/bin/sh
+# Copy the device configuration onto a running postmarketOS install.
+#
+#   ./install-on-device.sh <hostname-or-ip>
+#
+# It only writes configuration; it never touches the kernel or the packages,
+# which come from the image built with pmbootstrap.
+set -eu
+
+HOST=${1:?usage: install-on-device.sh <hostname-or-ip>}
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+
+say() { printf '\n== %s\n' "$*"; }
+
+# VoiceCall.conf uses controls that only exist from kernel r93 ('Voice Tx Capture Switch',
+# 'Voice Calibration'). With an older kernel the call profile does not load and calls lose audio.
+REL=$(ssh "$HOST" uname -r)
+R=${REL##*.r}
+case "$R" in ''|*[!0-9]*) echo "cannot read the kernel release ($REL)"; exit 1 ;; esac
+[ "$R" -ge 93 ] || { echo "kernel $REL: this configuration needs r93 or later (kernel/)"; exit 1; }
+
+say "ALSA UCM (audio routing and call volume)"
+ssh "$HOST" 'sudo mkdir -p /usr/share/alsa/ucm2/conf.d/sm8250'
+scp -q "$HERE"/device/audio/*.conf "$HOST":/tmp/
+ssh "$HOST" 'sudo mv /tmp/POCO-X3.conf /tmp/HiFi.conf /tmp/VoiceCall.conf \
+                     /usr/share/alsa/ucm2/conf.d/sm8250/'
+
+say "wireplumber (Bluetooth calls)"
+ssh "$HOST" 'mkdir -p ~/.config/wireplumber/wireplumber.conf.d \
+                      ~/.local/share/wireplumber/scripts/device \
+                      ~/.local/share/wireplumber/scripts/node'
+scp -q "$HERE"/device/wireplumber/*.conf "$HOST":'~/.config/wireplumber/wireplumber.conf.d/'
+# The Lua files MUST go here: anywhere else and wireplumber refuses to start.
+scp -q "$HERE"/device/wireplumber/*.lua "$HOST":'~/.local/share/wireplumber/scripts/device/'
+scp -q "$HERE"/device/wireplumber/node/*.lua "$HOST":'~/.local/share/wireplumber/scripts/node/'
+
+say "kernel module options (SLIMbus channel removal, voice session)"
+# slimbus.conf turns on patch 0130: without it, moving a call from the speaker back to a
+# Bluetooth headset leaves it mute both ways. The SLIMbus controller is loaded by
+# armar-audio-sistema.sh with `modprobe --ignore-install`, which does read `options`.
+scp -q "$HERE"/device/modprobe/*.conf "$HOST":/tmp/
+ssh "$HOST" 'sudo install -m644 /tmp/slimbus.conf /tmp/q6voice.conf /etc/modprobe.d/
+             P=/sys/module/slim_qcom_ngd_ctrl/parameters/remove_channels
+             [ -f $P ] && echo Y | sudo tee $P >/dev/null || true'
+
+say "notifications (sound and vibration)"
+scp -q "$HERE"/device/notifications/73-surya-vibra.rules "$HOST":/tmp/
+scp -q "$HERE"/device/notifications/'xiaomi,surya.json' "$HOST":/tmp/
+ssh "$HOST" 'sudo install -Dm644 /tmp/73-surya-vibra.rules /etc/udev/rules.d/73-surya-vibra.rules
+             # /usr/local, not /usr/share: a package upgrade would wipe the latter
+             sudo install -Dm644 /tmp/"xiaomi,surya.json" \
+                  /usr/local/share/feedbackd/themes/"xiaomi,surya.json"
+             sudo udevadm control --reload-rules && sudo udevadm trigger -s input
+             pkill -x feedbackd || true'
+
+say "pstore writable by the user (so the warning survives a reboot)"
+# /dev/pmsg0 is pstore's userspace channel: what is written there reappears in
+# /var/lib/systemd/pstore/pmsg-ramoops-0 after a reboot. It ships root:root, so a
+# user service cannot leave a trace that outlives a crash -- which is exactly when
+# it matters. aviso-bt-caido needs it.
+scp -q "$HERE"/device/power/99-pmsg-escribible.rules "$HOST":/tmp/
+ssh "$HOST" 'sudo install -Dm644 /tmp/99-pmsg-escribible.rules /etc/udev/rules.d/99-pmsg-escribible.rules
+             sudo udevadm control --reload && sudo udevadm trigger --name-match=pmsg0'
+
+say "services"
+scp -q "$HERE"/device/services/* "$HOST":/tmp/
+ssh "$HOST" 'set -e
+  mkdir -p ~/.local/bin ~/.config/systemd/user
+  # the headset call supervisor (needs py3-gobject3); its unit keeps the old name
+  install -m755 /tmp/armar-audio-usuario.sh /tmp/supervisor-llamada-bt.py ~/.local/bin/
+  install -m644 /tmp/armar-audio-usuario.service /tmp/llamada-al-bluetooth.service \
+                /tmp/hfp-registrado.service /tmp/aviso-bt-caido.service \
+                /tmp/goa-keyring-fix.service \
+                ~/.config/systemd/user/
+  sudo install -m755 /tmp/armar-audio-sistema.sh /tmp/hfp-registrado.sh \
+                     /tmp/aviso-bt-caido.sh /usr/local/bin/
+  sudo install -m644 /tmp/armar-audio.service /tmp/gnss-engine-unlock.service \
+                     /etc/systemd/system/
+  systemctl --user daemon-reload
+  systemctl --user enable armar-audio-usuario llamada-al-bluetooth hfp-registrado \
+                          aviso-bt-caido goa-keyring-fix
+  sudo systemctl daemon-reload
+  sudo systemctl enable armar-audio gnss-engine-unlock'
+
+say "echo cancellation (needs hexagonrpcd from packages/hexagonrpcd)"
+# The canceller is a dynamic module the ADSP's audio PD loads over fastrpc, so that PD has to be
+# served. The boot service turns cancellation on only if the factory voice calibration is in
+# /lib/firmware (not included, see docs/echo-cancellation.es.md); otherwise calls stay in
+# passthrough and work as before.
+scp -q "$HERE"/device/echo/* "$HOST":/tmp/
+ssh "$HOST" 'set -e
+  sudo mkdir -p /etc/systemd/system/hexagonrpcd-adsp-rootpd.service.d
+  sudo install -m644 /tmp/hexagonrpcd-adsp-rootpd.override-fwdir.conf \
+                     /etc/systemd/system/hexagonrpcd-adsp-rootpd.service.d/override-fwdir.conf
+  sudo install -m644 /tmp/hexagonrpcd-adsp-audiopd.service /tmp/cancelacion-eco.service \
+                     /etc/systemd/system/
+  sudo install -m755 /tmp/activar-cancelacion-eco.sh /usr/local/sbin/
+  sudo systemctl daemon-reload
+  sudo systemctl enable hexagonrpcd-adsp-audiopd.service
+  # pulled in by armar-audio.service; reenable drops any old multi-user.target link (a cycle)
+  sudo systemctl reenable cancelacion-eco.service'
+
+say "Done. Reboot the phone so everything comes up in the right order."

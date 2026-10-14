@@ -1,0 +1,10 @@
+subsystem,status,priority,summary,local_evidence,upstream_reference,confidence
+bateria_energia_termica,ported_com_lacunas,media,"Carga e gauge reportados funcionais; DT Android identifica BQ2597x em I2C 0x65, nibble PART_INFO ainda não lido; Xiaomi 33 W sem handshake",vendor health/power/thermal e configs; ver blob-index.csv,https://github.com/woodyst/surya-pmos,media
+camera,parcial_alta_prioridade,alta,"Traseira com autofocus; frontal sem fluxo; tuning ISP ausente e zoom limitado",HALs e configurações dos sensores; ver blob-index.csv,https://github.com/woodyst/surya-pmos,alta
+audio,parcial,alta,"Áudio de chamadas e rotas principais reportados; distorção em volume máximo; calibração de eco local",HAL/mixer/ACDB/DSP; ver blob-index.csv,https://github.com/woodyst/surya-pmos,alta
+sensores,parcial,media,"Acelerômetro, luz, proximidade e magnetômetro; vibração fraca",SSC/HAL/calibração; ver blob-index.csv,https://github.com/woodyst/surya-pmos,alta
+modem_gnss,parcial,media,"Chamadas/dados/SMS e GNSS reportados; sem A-GPS",QMI/GNSS/IPA; ver blob-index.csv,https://github.com/woodyst/surya-pmos,alta
+wifi_bluetooth,investigar,media,"Bluetooth reportado com correções recentes; Wi-Fi precisa confirmação separada",WLAN/BT blobs e serviços; ver blob-index.csv,https://github.com/woodyst/surya-pmos,media
+display_touch,investigar,alta,"Duas variantes DSI (Huaxing/Tianma); imagem requer bootloader/DT correspondente",DSI profiles e touch services; ver blob-index.csv,https://github.com/woodyst/surya-pmos,alta
+nfc,investigar,baixa,"Suporte do NFC não confirmado na documentação consultada",NXP/NQ service/configs; ver blob-index.csv,https://github.com/woodyst/surya-pmos,baixa
+usb_otg,portado,baixa,"USB OTG host reportado como funcional",configuração vendor USB; ver blob-index.csv,https://github.com/woodyst/surya-pmos,alta

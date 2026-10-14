@@ -1,0 +1,28 @@
+// Extracted from DTBO entry 7 (zero based), fragment@48; context removed.
+			bq2597x-charger@65 {
+				compatible = "ti,bq2597x-standalone";
+				reg = <0x65>;
+				interrupt-parent = <&tlmm>;
+				interrupts = <0x2b 0x02>;
+				pinctrl-names = "bq_charger_active", "bq_charger_suspend";
+				pinctrl-0 = <&bq_charger_int_active>;
+				pinctrl-1 = <&bq_charger_int_suspend>;
+				ti,bq2597x,bat-ovp-alarm-disable;
+				ti,bq2597x,bat-ocp-disable;
+				ti,bq2597x,bat-ocp-alarm-disable;
+				ti,bq2597x,bat-ucp-alarm-disable;
+				ti,bq2597x,bat-ucp-disable;
+				ti,bq2597x,bat-therm-disable;
+				ti,bq2597x,bus-therm-disable;
+				ti,bq2597x,die-therm-disable;
+				ti,bq2597x,bat-ovp-threshold = <0x11c6>;
+				ti,bq2597x,bat-ovp-alarm-threshold = <0x1162>;
+				ti,bq2597x,bus-ovp-threshold = <0x2ee0>;
+				ti,bq2597x,bus-ovp-alarm-threshold = <0x2af8>;
+				ti,bq2597x,bus-ocp-threshold = <0xdac>;
+				ti,bq2597x,bus-ocp-alarm-threshold = <0xce4>;
+				ti,bq2597x,bat-therm-threshold = <0x15>;
+				ti,bq2597x,bus-therm-threshold = <0x15>;
+				ti,bq2597x,die-therm-threshold = <0x91>;
+				ti,bq2597x,ac-ovp-threshold = <0x0e>;
+			}

@@ -1,0 +1,12 @@
+# Local firmware, extracted proprietary Android files, and prebuilt images
+/android/
+/postmarketos/*.img
+/postmarketos/prebuilt/
+/postmarketos/decoded-firmware/
+
+# Python bytecode and local build output
+__pycache__/
+*.py[cod]
+*.o
+*.ko
+*.tar.gz
