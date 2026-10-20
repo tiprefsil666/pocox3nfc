@@ -4,9 +4,19 @@
 /postmarketos/prebuilt/
 /postmarketos/decoded-firmware/
 
+# Reverse-engineering workspace: local copies of the proprietary vendor
+# binaries themselves, and the scratch output of the triage tools.  The
+# analysis, the evidence bundle, the tools and the reimplementation are
+# published; the binaries they were derived from are not.
+/.private/
+/rea/05-scratch/
+
 # Python bytecode and local build output
 __pycache__/
 *.py[cod]
 *.o
 *.ko
 *.tar.gz
+
+# Build output of the C reimplementation
+/rea/03-c-reimplementation/build/
