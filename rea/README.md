@@ -64,6 +64,38 @@ phone with no `devmem` applet),
 [`04-tools/csiphy-lane-decode.sh`](04-tools/csiphy-lane-decode.sh) and
 [`04-tools/diagnostico_camara.sh`](04-tools/diagnostico_camara.sh).
 
+### NFC — the NXP PN557 and its firmware
+
+The NFC controller is an NXP **PN557** with a PN5180-class radio, and the
+factory firmware ships three things worth having: the chip's firmware as a
+download sequence in a plain shared library, the RF calibration as text
+blocks, and the routing configuration.
+
+- [`02-notes/nfc-pn557.md`](02-notes/nfc-pn557.md) — the chip, the firmware format, the RF calibration blocks.
+- [`04-tools/extract_pn557_fw.py`](04-tools/extract_pn557_fw.py) — the firmware download sequence: 109 chunks, 7 with data.
+- [`04-tools/parse_nxp_rf.py`](04-tools/parse_nxp_rf.py) — the RF calibration blocks.
+
+### Audio — the mixer paths
+
+The audio configuration is a tree of routes over the WCD9375 codec and the
+TAS2562 amplifiers, with four tunings that differ in more than values.
+Decoded: **607 routes** in the WCD9375 tuning, and the microphone routes
+wired out in full.
+
+- [`02-notes/audio-mixer-paths.md`](02-notes/audio-mixer-paths.md) — the routes, the speakers, the microphones, the echo reference.
+- [`04-tools/parse_mixer_paths.py`](04-tools/parse_mixer_paths.py) — the routes, flattened.
+- [`04-tools/audio_inventory.py`](04-tools/audio_inventory.py) — the routes, the amplifiers and the codec each one touches.
+
+### GNSS — the modem's receiver
+
+The receiver is the modem, not the application processor, and the factory
+configuration says so: `NMEA_PROVIDER=0`. The modem supports BeiDou,
+GLONASS, QZSS, Galileo and SBAS, each with its own blacklist mask. The
+QMI LOC message table is already decoded and published in
+[`../surya-pmos/tools/qmi-loc-idl/`](../surya-pmos/tools/qmi-loc-idl/).
+
+- [`02-notes/gnss-qmi-loc.md`](02-notes/gnss-qmi-loc.md) — what the firmware says, and what is still missing (A-GPS assistance).
+
 ## Using REA on this tree
 
 ```sh
@@ -119,6 +151,15 @@ make -C 03-c-reimplementation test
 # 6. The camera inventory, decoded from the factory blobs
 04-tools/camera_inventory.py \
     ../android/extracted/rootfs/vendor/lib64/camera
+
+# 7. The NFC firmware download sequence
+04-tools/extract_pn557_fw.py 00-inputs/nfc/libpn557_fw.so
+
+# 8. The RF calibration blocks
+04-tools/parse_nxp_rf.py 00-inputs/nfc-config/libnfc-nxp_RF.conf
+
+# 9. The audio routes
+04-tools/audio_inventory.py 00-inputs/audio-config
 ```
 
 Step 5 reports `580 comparisons, 0 mismatches`.

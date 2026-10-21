@@ -5,11 +5,18 @@
 /postmarketos/decoded-firmware/
 
 # Reverse-engineering workspace: local copies of the proprietary vendor
-# binaries themselves, and the scratch output of the triage tools.  The
-# analysis, the evidence bundle, the tools and the reimplementation are
-# published; the binaries they were derived from are not.
+# binaries themselves, the factory ACDB calibration, and the scratch
+# output of the triage tools.  The analysis, the evidence bundle, the
+# tools, the reimplementation and the open-source configuration files are
+# published; the binaries and the per-device calibration are not.
 /.private/
 /rea/05-scratch/
+
+# The vendor binaries and the ACDB live outside the tree, in the private
+# working copy.  These symlinks point at them for local use only.
+/rea/00-inputs/audio
+/rea/00-inputs/gnss
+/rea/00-inputs/nfc
 
 # Python bytecode and local build output
 __pycache__/
