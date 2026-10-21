@@ -585,7 +585,7 @@ Estado: **en curso**. **Dos sensores emiten** (principal y frontal) y todo el So
 configurado correctamente, pero **ningún CSIPHY entrega un solo paquete al CSID**. El
 experimento de control (§ más abajo) demuestra que **el fallo es de camss**, no nuestro.
 
-Plan y datos completos en [`../PENDIENTES.md`](../PENDIENTES.md) §1.
+Plan y datos completos en `PENDIENTES.md` §1 (fichero local de trabajo, no publicado).
 
 ## Resumen de una línea
 El CAMSS de sm7150 ya está en mainline; faltaban los drivers (**WL2866D** ✅, **IMX682** ✅ y
@@ -1154,7 +1154,7 @@ tabla `csiphy_2ph_v1_2_reg[5][22]` literal, recorrido de `lane_mask` escribiendo
 bancos de los carriles cableados**, registros comunes primero (CTRL5, CTRL6=0x01, CTRL7=0x02,
 **CTRL0=0x02**), sin tabla de data-rate (el downstream **solo la aplica en C-PHY**:
 `if (csiphy_3phase) cam_csiphy_cphy_data_rate_config()`) y sin los `0x_5C`/`0x_60` que solo
-escribía mainline. Parche completo: [`csiphy-secuencia-downstream.patch`](csiphy-secuencia-downstream.patch).
+escribía mainline. Parche completo: `csiphy-secuencia-downstream.patch` (fichero local de trabajo, no publicado).
 
 **Verificado en hardware** leyendo el PHY durante el streaming: banco del carril 3 sin tocar
 (0x00, antes 0x91), `0x05c = 0x00`, `CTRL0=02 CTRL5=95 CTRL6=01 CTRL7=02`, settle 0x1D en los
@@ -1402,8 +1402,8 @@ Las **14 tablas** del blob: 5 modos × 73 registros + 9 + **638** + 2 + 1.
 `vt_pix_clk = 6,4 × 312/(2×8) = 124,8 MHz` con LLP=9432 / FLL=3528 → **30 fps** ✔ que es
 justo el ritmo medido en `FRAME_COUNT`. Todo coherente: **el driver del sensor es correcto**.
 
-Herramienta: [`dump-regtable.py`](dump-regtable.py) `<blob> <offset>` vuelca una tabla como C.
-Los blobs están en [`blobs/`](blobs/).
+Herramienta: [`dump_reg_table.py`](../../rea/04-tools/dump_reg_table.py) vuelca las tablas de registros como C.
+Los blobs están en `vendor/lib64/camera/` del firmware de fábrica.
 
 ---
 
@@ -1411,7 +1411,7 @@ Los blobs están en [`blobs/`](blobs/).
 
 `images/dtbo.img` de la ROM de fábrica → 27 overlays. **El de surya es el índice 7**
 (`qcom,msm-id = <0x16d 0x00>` = 365 = SM7150, `board-id = <0x22 0x00>`, y es el único con
-msm-id 365 que trae el WL2866D). Volcado en [`surya-factory-dtbo.dts`](surya-factory-dtbo.dts).
+msm-id 365 que trae el WL2866D). Volcado en `surya-factory-dtbo.dts` (fichero local de trabajo, no publicado).
 
 Confirma toda la topología (ya no hay que suponer nada):
 
@@ -1541,24 +1541,29 @@ a ese ritmo en el hardware. `link_freq` sale del **2º PLL** del modo: `19,2/3 (
 explícitamente** (`msm_csiphy1` incluido): tras reiniciar vuelven a `UYVY8/1920x1080`.
 
 ## Herramientas
-- [`dump-regtable.py`](dump-regtable.py) — vuelca una tabla de registros del blob como C.
-- [`parse-sensormodule.py`](parse-sensormodule.py) — resumen del blob (I2C, power seq, laneAssign, modos).
-- [`mmr.c`](mmr.c) — lector/escritor MMIO por `/dev/mem` (`gcc -static`, el host ya es aarch64).
+> **Estas herramientas están en [`rea/04-tools/`](../../rea/04-tools/), fuera de este
+> directorio.** Los enlaces de abajo apuntan a su nueva ubicación.
+
+- [`dump_regtable.py`](../../rea/04-tools/dump_regtable.py) — vuelca la secuencia de power-up de un blob.
+- [`dump_reg_table.py`](../../rea/04-tools/dump_reg_table.py) — vuelca las tablas de registros del blob como C.
+- [`parse_sensormodule.py`](../../rea/04-tools/parse_sensormodule.py) — resumen del blob (I2C, power seq, laneAssign, modos).
+- [`camera_inventory.py`](../../rea/04-tools/camera_inventory.py) — todos los blobs de golpe (12 sensores, 1052 pasos).
+- [`mmr.c`](../../rea/04-tools/mmr.c) — lector/escritor MMIO por `/dev/mem` (`gcc -static`, el host ya es aarch64).
   **`busybox devmem` NO tiene applet en este móvil.** Ojo: leer MMIO con el reloj parado da 0
   (o cuelga) → leer **durante** la captura.
-- [`diagnostico-camara.sh`](diagnostico-camara.sh) — solo lee.
-- [`csiphy-lane-decode.sh`](csiphy-lane-decode.sh) `<base_phy> <valores de CTRL5...>` — enmascara
+- [`diagnostico_camara.sh`](../../rea/04-tools/diagnostico_camara.sh) — solo lee.
+- [`csiphy-lane-decode.sh`](../../rea/04-tools/csiphy-lane-decode.sh) `<base_phy> <valores de CTRL5...>` — enmascara
   las IRQ, y por cada `CTRL5` limpia el latch y vuelca los 11 STATUS. **Es la herramienta que
   decodificó los bits.** Lanzar **con el sensor emitiendo**. Ej.:
   `csiphy-lane-decode.sh $((0xace0000)) 0x81 0x84 0x90 0xc0` (cada carril por separado).
-- [`csiphy-latch.sh`](csiphy-latch.sh) `<base_phy> <bus_i2c> <addr>` — prueba con/sin señal:
+- [`csiphy_latch.sh`](../../rea/04-tools/csiphy_latch.sh) `<base_phy> <bus_i2c> <addr>` — prueba con/sin señal:
   limpia, latchea 2 s emitiendo, para el sensor, limpia y latchea 2 s sin señal.
 - `settle_override` como parámetro del módulo: `/sys/module/qcom_camss/parameters/settle_override`
   (-1 = calculado) → barrer settle sin recompilar ni reiniciar.
 
 ## ★★ Las 4 hipótesis del prompt post-telefonía — probadas, TODAS descartadas (2026-07-18)
 
-Ver [`PROMPT-proxima-sesion-camara.md`](PROMPT-proxima-sesion-camara.md) para el razonamiento
+Ver `PROMPT-proxima-sesion-camara.md` (fichero local de trabajo, no publicado) para el razonamiento
 completo. Resultado de probarlas la misma noche, en orden:
 
 1. **Parámetros del CSIPHY vía blob del vendor**: parseado `imx682_ofilm_ver2.bin` entero
@@ -1597,7 +1602,7 @@ dossier completo (carril 0 sin estado, TPG bueno, byte a byte contra fábrica, t
 2. **★ Ir a los mantenedores de sm7150-mainline** con el caso — ya es la opción con más peso
    relativo: las 4 hipótesis nuevas post-telefonía están agotadas (ver arriba), y el caso ya tiene
    dossier completo (carril 0 sin estado, TPG bueno, byte a byte contra fábrica, timing hasta
-   20 ms sin efecto) (ver `../PENDIENTES.md` §1).
+   20 ms sin efecto) (ver `PENDIENTES.md` §1, fichero local de trabajo).
 3. ~~Cámara frontal como experimento de control~~ → ✅ **HECHO** (ver arriba): csiphy1 tampoco
    engancha → **el fallo es de camss**.
 4. Investigar por qué a csiphy1 le falta **LN2** (`0x494` no se mueve y los otros tres sí).

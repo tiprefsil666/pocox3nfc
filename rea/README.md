@@ -39,6 +39,31 @@ Full write-up, with the evidence IDs and the confirmed/inferred split:
 Reimplementation and its verification:
 [`03-c-reimplementation/`](03-c-reimplementation/).
 
+### The vendor camera configuration — `com.qti.sensormodule.*.bin`
+
+The blobs that describe every camera module in the factory firmware: the
+sensor, the module, the I2C slaves, the register tables of the power-up
+sequence, the lane assignment and the resolution tables.
+
+The format was recovered here and is now documented, together with the tools
+that decode it:
+
+- [`02-notes/camera-sensormodule.md`](02-notes/camera-sensormodule.md) — the format, the inventory, and what the blob does *not* contain.
+- [`04-tools/parse_sensormodule.py`](04-tools/parse_sensormodule.py) — the container format.
+- [`04-tools/dump_regtable.py`](04-tools/dump_regtable.py) — the power-up sequence.
+- [`04-tools/camera_inventory.py`](04-tools/camera_inventory.py) — every blob at a glance.
+
+The inventory covers all twelve blobs: **1 052 power-up steps and about 1.2
+million register writes**, across the IMX682 (rear), S5K3T2 (front), HI1337
+(ultra), HI259 (macro), GC02M1B and OV02B1B (depth) sensors.
+
+The camera notes in `surya-pmos/docs/camera.es.md` refer to tools that were
+never committed. They are now here, rebuilt from the descriptions in those
+notes: [`04-tools/mmr.c`](04-tools/mmr.c) (MMIO through `/dev/mem`, for a
+phone with no `devmem` applet),
+[`04-tools/csiphy-lane-decode.sh`](04-tools/csiphy-lane-decode.sh) and
+[`04-tools/diagnostico_camara.sh`](04-tools/diagnostico_camara.sh).
+
 ## Using REA on this tree
 
 ```sh
@@ -51,14 +76,8 @@ rea/04-tools/triage.sh <elf>
 # Resolve Hopper's sub_XXXX thunks to real symbol names
 rea/04-tools/resolve_plt.py <elf>
 
-# Then open it in REA and work with the focused tools
-mcp__rea rea_open_binary {path: "<elf>"}
-mcp__rea rea_binary_overview {}
-mcp__rea rea_procedure_assembly {procedure: "0x2ae4"}
-mcp__rea rea_procedure_pseudo_code {procedure: "0x2ae4"}
-mcp__rea rea_search_strings {pattern: "..."}
-mcp__rea rea_xrefs {address: "0x..."}
-mcp__rea rea_export_evidence_bundle {path: "<out>/session.json"}
+# Disassemble, when Hopper's decompiler is ambiguous
+rea/04-tools/disasm.py <elf> --range <start> <end>
 ```
 
 Two providers are configured on this host: **Hopper** (available) and
@@ -76,7 +95,7 @@ mangle stack layouts. Two things that cost real time here:
 - **Check the raw instruction encodings.** Where the decompiler's variable
   names made the data flow ambiguous, the instruction stream settled it. The
   `csel` pattern in `sub_2ae4` in particular only makes sense once decoded by
-  hand.
+  hand. `04-tools/disasm.py` gives a plain disassembly via capstone.
 
 ## Reproducing the verification
 
@@ -96,6 +115,10 @@ make -C 03-c-reimplementation test
 # 5. Differential test: the C implementation against an independent
 #    Python transcription of the same instructions
 04-tools/differential_test.py 03-c-reimplementation/build/xpd_auth
+
+# 6. The camera inventory, decoded from the factory blobs
+04-tools/camera_inventory.py \
+    ../android/extracted/rootfs/vendor/lib64/camera
 ```
 
 Step 5 reports `580 comparisons, 0 mismatches`.

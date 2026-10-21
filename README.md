@@ -45,3 +45,18 @@ session seed and only the first 16 bytes of the MAC compared.
 Verified against the published RFC and FIPS test vectors and by 580
 differential comparisons against an independent transcription of the same
 instructions.
+
+## The vendor camera configuration
+
+The blobs that describe every camera module of the factory firmware —
+`com.qti.sensormodule.*.bin` — hold the sensor, the module, the I2C slaves,
+the register tables of the power-up sequence, the lane assignment and the
+resolution tables. Their format is now documented, and the tools that decode
+them are committed.
+
+- [`rea/02-notes/camera-sensormodule.md`](rea/02-notes/camera-sensormodule.md) — the format, the inventory, and what the blob does *not* contain.
+- [`rea/04-tools/`](rea/04-tools/) — the parser, the inventory, and the hardware diagnostics the camera notes refer to (`mmr`, the CSIPHY lane decoder, the read-only diagnostic).
+
+Across the twelve blobs that is **1 052 power-up steps and about 1.2 million
+register writes**, covering the IMX682, S5K3T2, HI1337, HI259, GC02M1B and
+OV02B1B sensors.

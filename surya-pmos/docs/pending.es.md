@@ -90,7 +90,7 @@ Lo único mejorable, y solo si molesta el ruido en los registros, es evitar el `
 
 ## ★ Cámara — por dónde retomar (2026-08-06)
 
-Estado completo en `camera/README.md`. Resumen para no releerlo entero:
+Estado completo en [`camera.es.md`](camera.es.md). Resumen para no releerlo entero:
 
 **Arreglado**: la regresión del VFE (parche 0107) — `enable_irq()` iba **después** de
 `vfe_reset()`, que espera esa interrupción, así que ninguna captura funcionaba desde hace dos
@@ -430,7 +430,7 @@ bloqueado; falta el front-end analógico y el UCM de captura). Además:
 
 ## 1) CÁMARA  🟠 (EN CURSO desde 2026-07-17)
 
-**Toda la base de conocimiento verificada está en [`camera/README.md`](camera/README.md).**
+**Toda la base de conocimiento verificada está en [`camera.es.md`](camera.es.md).**
 Aquí solo el estado, el criterio de aceptación y el caso para los mantenedores.
 
 ### Estado
@@ -798,7 +798,7 @@ arranque tras migrar deja la carga en ~18 varios minutos escaneando los 77 paque
 
 ## ★ HISTÓRICO — COMPARACIÓN `lane_regs_sm7150` vs CSIPHY del downstream (2026-07-17)
 
-> ⚠️ **Medido con el mapeo de carriles roto** (ver `camera/README.md` §TRAMPA): los resultados
+> ⚠️ **Medido con el mapeo de carriles roto** (ver `camera.es.md` §TRAMPA): los resultados
 > negativos de aquí **no cuentan**. La comparación de tablas sí sigue siendo válida y útil.
 
 **Fuente correcta**: `sdmmagpie-camera.dtsi` dice `compatible = "qcom,csiphy-v1.2"` → la tabla del
@@ -878,7 +878,7 @@ Portar **los valores por carril del downstream** (`csiphy_2ph_v1_2_reg`) a `lane
 
 > ⚠️ **Todo lo de esta sección se midió con el mapeo de carriles roto** → los resultados
 > negativos **no cuentan**. El barrido de settle se ha repetido ya en condiciones válidas
-> (sigue en cero). Ver `camera/README.md`.
+> (sigue en cero). Ver `camera.es.md`.
 
 ### ⚠️⚠️ CORRECCIÓN GRAVE: "csiphy0 IRQ = 0" NO PRUEBA NADA
 Durante toda la investigación anterior usé `csiphy0 IRQ = 0` como prueba de que "el PHY no ve señal

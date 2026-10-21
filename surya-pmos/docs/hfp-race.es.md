@@ -146,7 +146,7 @@ hfp-registrado: el HFP esta bien registrado (wireplumber pid 16443)
 - [`bluetooth.es.md`](bluetooth.es.md) — cómo funciona el audio Bluetooth de llamada y el offload por SLIMBus
 - [`camss.es.md`](camss.es.md) — por qué existe el otro reinicio de wireplumber, el de la cámara
 - [`../device/services/hfp-registrado.sh`](../device/services/hfp-registrado.sh) — el guardián
-- [`../device/services/llamada-al-bluetooth.sh`](../device/services/llamada-al-bluetooth.sh) — el que engancha el SCO
+- [`../device/services/llamada-al-bluetooth.service`](../device/services/llamada-al-bluetooth.service) — el que engancha el SCO
 - [`../device/power/avisar-camaras.sh`](../device/power/avisar-camaras.sh) — el reinicio que dispara la carrera
 
 
