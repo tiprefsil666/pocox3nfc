@@ -37,6 +37,9 @@ espanhol).
 | H7 | **Auriculares por cabo** (USB-C) | ligar auscultadores | audio bidireccional |
 | H8 | **Slot SIM 2** | inserir um segundo SIM | o modem detecta-a |
 | H9 | **TV-out** (via USB-C) | ligar um ecrã | não testado em lado nenhum |
+| H10 | **IR de controlo remoto** | ver [`rea/02-notes/ir-and-fm.md`](../../rea/02-notes/ir-and-fm.md) | ⚠️ **o firmware sugere que não existe** — confirmar fisicamente antes de escrever código |
+| H11 | **IR da câmara + filtro IR-cut** | abrir a câmara no escuro | o filtro muda de estado, a câmara vê em IR |
+| H12 | **Rádio FM** | ligar auscultadores, abrir a app de rádio | ⚠️ **todo o stack falta no mainline** |
 
 ### 1.3 Software que falta escrever
 
@@ -48,6 +51,9 @@ espanhol).
 | S4 | **Roteamento de microfones** do WCD9375 | pequeno | **alta** — está no `mixer_paths` |
 | S5 | **A-GPS no modem** | médio | média |
 | S6 | **Portar o `mixer_paths` para mainline** | pequeno | **alta** |
+| S7 | **Driver do LED IR da câmara** (`qcom,camera-ir-led`) + o filtro IR-cut | pequeno | média |
+| S8 | **Driver IR por SPI** (`ir-spi-led`) + nó de DT | pequeno | **baixa** — confirmar primeiro se a peça existe |
+| S9 | **Stack de rádio FM** (transporte `radio_iris_transport`, HCI, patches via QMI, calibração por I²C) | **grande** | baixa |
 
 > **S4 é a próxima acção de maior rendimento.** O ficheiro
 > `rea/02-notes/audio-mixer-paths.md` tem o quadro completo: são 607 rotas, e o
@@ -466,6 +472,40 @@ adb shell getprop | grep -iE 'audio|mixer|platform'
 # e o log do HAL na inicialização
 adb logcat -b all | grep -iE 'mixer_paths|audio_platform'
 ```
+
+### 4.6 A IR de controlo remoto pode não existir
+
+O HAL de IR do Android conduz `/dev/spidev0.1`, mas:
+
+- o nó da **SPI0 está `disabled`** no DTBO e não tem dispositivo filho;
+- **não há `ir-spi-led`** (nem `led-active-low`, nem `duty-cycle`) em lado
+  nenhum do DTBO;
+- **o kernel de fábrica não tem driver de IR** — nenhum dos 38 módulos do
+  vendor, e nada no `kernel.uncompressed`.
+
+A IR que **existe** é a da câmara: o LED IR e o filtro IR-cut, nos GPIO 73 e
+74, com o driver `qcom,camera-ir-led` que o mainline não tem.
+
+**Confirmar fisicamente antes de escrever o driver.** Se a peça existir, o
+mainline já tem `CONFIG_IR_SPI=m` e o driver `ir-spi-led` genérico; o que
+falta é o nó de DT e possivelmente um regulador.
+
+Ver [`rea/02-notes/ir-and-fm.md`](../../rea/02-notes/ir-and-fm.md).
+
+### 4.7 O rádio FM é o WCN3990, não um chip à parte
+
+A HAL de FM (`vendor.qti.hardware.fm@1.0-impl.so`) fala com o Bluetooth
+(`HIDL_FETCH_IFmHci`) — o FM viaja por HCI até ao WCN3990 ("cherokee", o
+mesmo chip do Bluetooth e do Wi-Fi).
+
+O boot precisa de:
+1. `echo 1 > /sys/module/radio_iris_transport/parameters/fmsmd_set`;
+2. `fm_qsoc_patches`, que descarrega os patches **via QMI** (do modem) e
+   escreve a calibração do DAC **por I²C** (notch filters e spur table).
+
+Isto é um trabalho grande, e a parte difícil não é o driver: é o download
+dos patches e da calibração, que precisa do modem e do codec envolvidos no
+arranque, na ordem certa, com o tipo de chip certo.
 
 ---
 

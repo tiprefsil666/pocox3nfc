@@ -96,6 +96,16 @@ QMI LOC message table is already decoded and published in
 
 - [`02-notes/gnss-qmi-loc.md`](02-notes/gnss-qmi-loc.md) — what the firmware says, and what is still missing (A-GPS assistance).
 
+### Infrared and FM radio
+
+Both are asked about often, and neither is what people expect. Three
+different things get called "infrared" on this phone, and the FM radio is
+not a separate chip at all: it is the WCN3990, reached through the
+Bluetooth HCI transport.
+
+- [`02-notes/ir-and-fm.md`](02-notes/ir-and-fm.md) — the camera's IR LED and its IR-cut filter, the remote control emitter that the firmware never enables, and the FM stack that rides on the Bluetooth chip.
+- [`04-tools/ir_fm_config.py`](04-tools/ir_fm_config.py) — the device tree and the vendor side, side by side.
+
 ## Using REA on this tree
 
 ```sh
