@@ -240,6 +240,7 @@ the same terms as the projects they extend. See [`NOTICE.md`](NOTICE.md).
 ## Documentation
 
 - [`docs/`](docs/) — per-subsystem notes: what was wrong, how it was found, and the traps.
+- [`docs/ROADMAP-pt.md`](docs/ROADMAP-pt.md) — **the plan from here**: what is missing per subsystem, how to build the final image step by step, and what to measure in the real tests.
 - [`kernel/`](kernel/) — the patch series, one commit per fix.
 - [`tools/qmi-loc-idl/`](tools/qmi-loc-idl/) — decoder for the modem's QMI LOC interface
   table: all 470 messages, and the three that got implemented in

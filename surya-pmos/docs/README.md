@@ -7,6 +7,7 @@ they record *how* each thing was found, and the traps that cost the most time.
 
 | File | What it covers |
 |---|---|
+| **[`ROADMAP-pt.md`](ROADMAP-pt.md)** | **The plan from here: what is missing per subsystem, how to build the final image step by step, and what to measure in the real tests** (Portuguese) |
 | [`camera.es.md`](camera.es.md) | The camera, from "not a single packet" to autofocus. The root cause was that the sensor transmits in **C-PHY** while the receiver was set to D-PHY |
 | [`audio.es.md`](audio.es.md) | Audio architecture: amplifiers, routing, call path through the DSP |
 | [`bluetooth.es.md`](bluetooth.es.md) | Bluetooth calls: SCO over SLIMBus and offload to the chip |
