@@ -106,6 +106,25 @@ Bluetooth HCI transport.
 - [`02-notes/ir-and-fm.md`](02-notes/ir-and-fm.md) — the camera's IR LED and its IR-cut filter, the remote control emitter that the firmware never enables, and the FM stack that rides on the Bluetooth chip.
 - [`04-tools/ir_fm_config.py`](04-tools/ir_fm_config.py) — the device tree and the vendor side, side by side.
 
+### What this port enables, and what is missing
+
+A comparison between the stock firmware's device tree and the one this
+port's kernel produces. It is the shortest answer to "what is actually
+done, and what is not".
+
+- [`02-notes/port-vs-factory.md`](02-notes/port-vs-factory.md) — the table, the four gaps, and the OCV table that is a per-device calibration sitting in a shared patch.
+
+### A device tree, checked
+
+The analysis in the notes was done by reading device trees by hand. That
+works, but it does not scale, and a missed node is easy. The cross-check
+tool answers a fixed set of questions for any tree — is the component
+there, is it enabled, is the bus it hangs off enabled — and it works on
+the factory's DTBO, on the upstream project's published tree, and on the
+tree this port's own patches produce.
+
+- [`04-tools/dt_crosscheck.py`](04-tools/dt_crosscheck.py) — the components, their mainline drivers, and what "ready" means for each.
+
 ### The USB-C analogue audio
 
 The chip that switches a USB-C port over to an analogue headset — the

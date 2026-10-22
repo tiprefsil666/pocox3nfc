@@ -14,7 +14,7 @@ set -eu
 . "$(dirname -- "$0")/env.sh"
 . "$(dirname -- "$0")/lib.sh"
 
-STEPS="00-check-host.sh 05-prepare-boot.sh 10-fetch.sh 20-overlay.sh 30-build.sh 50-verify.sh"
+STEPS="00-check-host.sh 05-prepare-boot.sh 10-fetch.sh 15-verify-series.sh 20-overlay.sh 30-build.sh 50-verify.sh"
 
 start=""
 stop=""
@@ -40,6 +40,7 @@ if [ "$LIST_ONLY" = "1" ]; then
 00 check-host       as dependências do host
 05 prepare-boot     o u-boot do painel e os vbmeta vazios
 10 fetch            o pmaports
+15 verify-series    os 140 patches contra a base fixada
 20 overlay          os quatro overlays
 30 build            a configuração e a imagem
 50 verify           a imagem e o kernel

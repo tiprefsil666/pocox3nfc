@@ -31,6 +31,7 @@ Isto corre, por ordem:
 | `00-check-host.sh` | confirma que as dependências estão instaladas |
 | `05-prepare-boot.sh` | descarrega o u-boot do painel certo e gera os vbmeta vazios |
 | `10-fetch.sh` | clona o pmaports |
+| `15-verify-series.sh` | confirma que os 140 patches ainda aplicam sobre a base fixada |
 | `20-overlay.sh` | copia os quatro overlays e renormaliza a série de patches |
 | `30-build.sh` | configura o pmbootstrap e constrói a imagem |
 | `50-verify.sh` | confere que a imagem está bem e que o kernel e os módulos são do mesmo build |
@@ -138,6 +139,22 @@ o tag é fixado e verificado.
 
 O commit usado fica registado em `out/pmaports-version.txt`, para
 qualquer imagem poder ser rastreada até à origem.
+
+### `15-verify-series.sh` — a série ainda aplica?
+
+A base do kernel é o **tarball de uma tag** de outro repositório — e
+uma tag pode-se mover. Se isso acontecer, a build começa de uma árvore
+diferente sem dizer nada.
+
+Este passo descarrega o tarball exacto que a build usa e aplica os 140
+patches por ordem, e diz quantos aplicam. O commit da tag fica
+gravado em `out/series-check.txt`.
+
+É o mesmo tarball, o mesmo tag e o mesmo estado — a diferença é que
+aqui é verificado, e não se descobre a meio da build.
+
+> 📌 O resultado em 2026-10-22: **140 aplicam, 0 falham**, sobre
+> `v7.1_rc3` @ `1fd06fd1`.
 
 ### `20-overlay.sh` — os quatro overlays
 

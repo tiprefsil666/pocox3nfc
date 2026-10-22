@@ -130,6 +130,27 @@ por fazer aqui, e a prioridade é a mesma.
 > [`rea/02-notes/usb-c-audio-fsa4480.md`](../../rea/02-notes/usb-c-audio-fsa4480.md).
 > A referência é a `sm8350-hdk` do mainline.
 >
+> 📌 **A comparação completa está feita.** A árvore de dispositivo da
+> fábrica contra a que os 140 patches produzem está em
+> [`rea/02-notes/port-vs-factory.md`](../../rea/02-notes/port-vs-factory.md),
+> e os 140 patches aplicam-se limpos sobre a base fixada
+> (`v7.1_rc3` @ `1fd06fd1`) — verificado por
+> `build/15-verify-series.sh`.
+>
+> As quatro lacunas que ficam: o **FSA4480** (áudio USB-C, a receita
+> está escrita), a **NFC**, o **leitor de impressão digital** e o **LED
+> IR da câmara**.
+>
+> ⚠️ **E um perigo que não é uma lacuna:** a tabela OCV da bateria é uma
+> **calibração por dispositivo** que está num patch partilhado. O patch
+> 0117 remove a tabela upstream com este aviso — *"Left in place it is
+> worse than nothing, because it reports a calibrated-looking percentage
+> that is wrong for the new cell"* — e o 0126 volta a pôr uma tabela
+> medida na bateria de substituição. Quem compilar este kernel com uma
+> célula diferente fica com uma percentagem errada e com ar de
+> calibrada. A tabela é **dados, não um patch**, e quer viver num sítio
+> que diga de quem é a bateria.
+>
 > 📌 **O WCD9375 já está ligado** — o patch 0031 põe os macros do LPASS,
 > os controladores SoundWire, o codec e o *DAI link* de captura, e o
 > patch 0034 e 0035 tratam do SoundWire e do pino de reset. O que falta
