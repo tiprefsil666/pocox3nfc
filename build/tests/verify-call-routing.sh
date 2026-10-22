@@ -34,19 +34,43 @@ echo
 # ---------------------------------------------------------------------------
 echo "1. o perfil de chamada"
 
-UCM_DIR=/usr/share/alsa/ucm2/conf.d/sm8250
-if [ -f "$UCM_DIR/VoiceCall.conf" ]; then
-    ok "VoiceCall.conf está em $UCM_DIR"
+# The official alsa-ucm-conf-qcom-sm7150 package installs its profile in
+# Xiaomi/surya/ and its use case in conf.d/sm8250/, under the name
+# "POCO X3.conf" — with a space. This port's configuration replaces both
+# in place, so these are the paths to check.
+UCM_ROOT=/usr/share/alsa/ucm2
+UCM_DIR=$UCM_ROOT/conf.d/sm8250
+UCM_PROF=$UCM_ROOT/Xiaomi/surya
+
+if [ -f "$UCM_PROF/VoiceCall.conf" ]; then
+    ok "VoiceCall.conf está em $UCM_PROF"
 else
-    bad "VoiceCall.conf não está em $UCM_DIR"
+    bad "VoiceCall.conf não está em $UCM_PROF"
     note "o perfil não vai carregar; instalar com"
     note "    surya-pmos/scripts/install-on-device.sh <host>"
 fi
 
-if [ -f "$UCM_DIR/POCO-X3.conf" ]; then
-    ok "POCO-X3.conf está em $UCM_DIR"
+if [ -f "$UCM_PROF/HiFi.conf" ]; then
+    ok "HiFi.conf está em $UCM_PROF"
 else
-    bad "POCO-X3.conf não está em $UCM_DIR"
+    bad "HiFi.conf não está em $UCM_PROF"
+fi
+
+# The use case, under the official name. Both spellings are accepted, but
+# there must only be one: two "HiFi" use cases compete.
+if [ -f "$UCM_DIR/POCO X3.conf" ]; then
+    ok "'POCO X3.conf' está em $UCM_DIR"
+elif [ -f "$UCM_DIR/POCO-X3.conf" ]; then
+    ok "'POCO-X3.conf' está em $UCM_DIR"
+else
+    bad "nenhum 'POCO X3.conf' em $UCM_DIR"
+fi
+
+n=$(ls "$UCM_DIR" 2>/dev/null | grep -icE '^poco.*x3.*\.conf$')
+if [ "${n:-0}" -gt 1 ]; then
+    bad "há $n ficheiros de use case do POCO X3 — só pode haver um"
+    note "o 'alsa-ucm-conf-qcom-sm7150' oficial e a nossa configuração"
+    note "estão a competir; ver o roadmap §4.5.1"
 fi
 
 # The use case has to be listed by the UCM library itself.
@@ -126,8 +150,8 @@ echo "4. o routing dos microfones"
 # The profile has to send the call microphone to the right place. The
 # expected route is the main microphone, and the earpiece microphone has to
 # be off during a call.
-if [ -f "$UCM_DIR/VoiceCall.conf" ]; then
-    if grep -q 'SectionDevice' "$UCM_DIR/VoiceCall.conf"; then
+if [ -f "$UCM_PROF/VoiceCall.conf" ]; then
+    if grep -q 'SectionDevice' "$UCM_PROF/VoiceCall.conf"; then
         ok "o VoiceCall.conf tem SectionDevice"
     else
         bad "o VoiceCall.conf não tem SectionDevice"
@@ -135,7 +159,7 @@ if [ -f "$UCM_DIR/VoiceCall.conf" ]; then
     # The capture controls that the profile sets. These are the ones that
     # only exist from kernel r93.
     for c in 'Voice Tx Capture Switch' 'Voice Calibration'; do
-        if grep -q "$c" "$UCM_DIR/VoiceCall.conf"; then
+        if grep -q "$c" "$UCM_PROF/VoiceCall.conf"; then
             ok "usa '$c'"
         else
             bad "não usa '$c'"
@@ -151,8 +175,8 @@ echo "5. o altifalante e o auscultador"
 # The two output devices of the profile. Both have to be there: the
 # altifalante is the top amplifier and the auscultador is the same one
 # through the earpiece routing.
-if [ -f "$UCM_DIR/VoiceCall.conf" ]; then
-    n=$(grep -c 'SectionDevice' "$UCM_DIR/VoiceCall.conf")
+if [ -f "$UCM_PROF/VoiceCall.conf" ]; then
+    n=$(grep -c 'SectionDevice' "$UCM_PROF/VoiceCall.conf")
     if [ "$n" -ge 2 ]; then
         ok "$n SectionDevice (auricular e altifalante)"
     else

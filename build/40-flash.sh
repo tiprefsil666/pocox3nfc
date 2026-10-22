@@ -27,12 +27,27 @@ say "o que vai ser feito"
 cat <<EOF
 
   1. entrar em fastboot          adb reboot bootloader
-  2. gravar o u-boot             fastboot flash boot u-boot-sm7150-xiaomi-surya-$PANEL.img
-  3. apagar o dtbo               fastboot erase dtbo
-  4. gravar o vbmeta vazio       fastboot flash vbmeta vbmeta.img --disable-verity --disable-verification
-     (e o vbmeta_system)         fastboot flash vbmeta_system vbmeta_system.img --disable-verity --disable-verification
-  5. gravar a raiz               pmbootstrap flasher flash_rootfs
-  6. arrancar                    fastboot reboot
+  2. apagar o dtbo               fastboot erase dtbo
+  3. gravar o u-boot             fastboot flash boot u-boot-sm7150-xiaomi-surya-$PANEL.img
+  4. gravar a raiz               pmbootstrap flasher flash_rootfs
+  5. arrancar                    fastboot reboot
+
+  (o vbmeta vazio é opcional — ver a nota abaixo)
+
+EOF
+
+cat <<'EOF'
+📌 Isto é o procedimento oficial, da wiki do projecto:
+
+    https://wiki.nura.eco/wiki/Qualcomm_SM7150_(qcom-sm7150)
+
+  O U-Boot é *chainloaded* pelo bootloader de fábrica: o bootloader
+  primário não é substituído, o U-Boot vai para a partição "boot" e a
+  Xiaomi arranca-o. A raiz vai para "userdata".
+
+  O esquema de partições mudou completamente com a passagem para o
+  U-Boot. O esquema antigo e o novo são incompatíveis e não há migração:
+  é uma instalação limpa ou nada.
 
 EOF
 
@@ -46,6 +61,13 @@ if [ ! -f "$UBOOT" ]; then
     echo "    PANEL=tianma ./40-flash.sh para tentar o outro"
     echo
 fi
+
+# Which panel is this phone? The wiki's method, which is better than
+# reading a property: the kernel logs it.
+echo "  Para confirmar o painel, com o Android a correr:"
+echo "      adb wait-for-device && adb reboot && adb logcat | grep \"panel name is\""
+echo "      # imprime 'panel name is Huaxing' ou 'panel name is Tianma'"
+echo
 
 if [ "$RUN" != "--run" ]; then
     say "isto foi só a pré-visualização"
@@ -67,10 +89,15 @@ fastboot flash boot "$UBOOT"
 say "a apagar o dtbo"
 fastboot erase dtbo
 
-say "a gravar o vbmeta vazio"
+# The vbmeta is optional. The wiki does not mention it: with the bootloader
+# unlocked and U-Boot chainloaded, the AVB verification is not enforced.
+# Flashing it does no harm, and it is the guarantee — so it is done, but
+# a failure is not fatal.
+say "a gravar o vbmeta vazio (opcional)"
 for f in vbmeta vbmeta_system; do
     if [ -f "$BOOTDIR/$f.img" ]; then
-        fastboot flash "$f" "$BOOTDIR/$f.img" --disable-verity --disable-verification
+        fastboot flash "$f" "$BOOTDIR/$f.img" --disable-verity --disable-verification \
+            || warn "o $f não foi gravado — é opcional"
     else
         warn "$f.img não está em $BOOTDIR — corra 05-prepare-boot.sh"
     fi

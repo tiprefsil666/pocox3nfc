@@ -82,6 +82,33 @@ Which one the HAL loads is decided at run time; the names suggest `tavil`
 is the tuning that ships with this SoC generation and `idp` is the
 in-house product one.
 
+> ✅ **Resolved: it is `mixer_paths_wcd9375.xml`.**
+>
+> The device tree of the stock firmware, published by the upstream project
+> in `sm7150-mainline/downstream-fdt`, gives the sound card's model:
+>
+> ```
+> sm6150_snd: sound {
+>     compatible = "qcom,sm6150-asoc-snd";
+>     qcom,model = "sm6150-wcd9375-snd-card";
+> ```
+>
+> The HAL picks the file by that name: `sm6150-<variant>-snd-card` →
+> `mixer_paths_<variant>.xml`. The variants in the HAL's strings line up
+> exactly with the four files that exist — `wcd9375`, `qrd`, `tavil`, `idp`
+> and `wcd9375qrd`.
+>
+> So the board is a **`wcd9375`** one, and `mixer_paths_idp.xml` belongs
+> to a different board — even though the device tree's top-level `model`
+> is `"IDP"`, which is a red herring: it is the board's name, not the
+> sound card's.
+>
+> The same tree confirms the NFC is the NXP NCI
+> (`compatible = "qcom,nq-nci"`) and that the FM is a WCN feature
+> (`qcom,wcn-btfm = <0x01>` on the sound card).
+>
+> See [`upstream-parallel-work.md`](upstream-parallel-work.md).
+
 ## The speakers
 
 The `speaker` route of `mixer_paths_wcd9375.xml` writes the TAS2562
@@ -211,16 +238,33 @@ the ADSP.
 
 ## Open questions
 
-- Which of the four `mixer_paths_*.xml` files this board actually loads.
-  The `audio.primary.sm6150.so` picks it at run time, most likely from a
-  build property. The board's use of the TAS2562 rules out `qrd` (WSA
-  amplifier) and, if the amplifier controls are to be applied at all,
-  `tavil` (no amplifier controls); it leaves `wcd9375` and `idp`, and
-  those two are the same board seen through two tunings.
+- ~~Which of the four `mixer_paths_*.xml` files this board actually
+  loads.~~ **Answered: `mixer_paths_wcd9375.xml`**, from the sound card's
+  `qcom,model` in the upstream device tree — see §"The four tunings".
 - The ACDB format, and which of its tables carry the voice calibration.
 - The `TERT_MI2S_RX Channels = Two` control on the speaker route: the
   tertiary MI2S is the DSP's link to the amplifiers, and the mainline
   driver's handling of it is not established.
+
+> 📌 **The upstream project already has an audio configuration.** The
+> `sm7150-mainline/alsa-ucm-conf` repository, packaged in pmaports as
+> `alsa-ucm-conf-qcom-sm7150` and pulled in by the `device-qcom-sm7150`
+> package, carries the UCM configuration for this board.
+>
+> Its surya profile is 18 lines — a mono speaker and nothing else. This
+> port's is 172, with the stereo split, the amplifier gains and the
+> microphone capture.
+>
+> ⚠️ **They collide.** The upstream package installs
+> `conf.d/sm8250/POCO X3.conf` — **with a space, not a hyphen** — and
+> puts the profile in `Xiaomi/surya/HiFi.conf`. This port's
+> `install-on-device.sh` writes `HiFi.conf`, `POCO-X3.conf` and
+> `VoiceCall.conf` into `conf.d/sm8250/`. On a current build that means
+> two "HiFi" use cases, one of them the simple upstream one, and a
+> "Voice Call" use case pointing at a file that was never installed.
+>
+> This has to be reconciled before the next flash. See §4.5 of the
+> roadmap.
 
 ## Reproducing this analysis
 

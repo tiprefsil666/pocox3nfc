@@ -31,9 +31,34 @@ flash and the seventeen tests — is in
 [`build/README.md`](build/README.md), and the roadmap that leads to it is
 in [`surya-pmos/docs/ROADMAP-pt.md`](surya-pmos/docs/ROADMAP-pt.md).
 
+The flashing procedure is the one the upstream project documents and
+tests: <https://wiki.nura.eco/wiki/Qualcomm_SM7150_(qcom-sm7150)>.
+
 > ⚠️ The build has not yet been run end to end on a clean installation.
 > Flash to a second partition, a second phone or a microSD card first, not
 > to the phone that works today.
+
+## The other work on this hardware
+
+The upstream `sm7150-mainline` project ports the same SoC to postmarketOS,
+and the community has already solved several of the things this workspace
+was working on. Reading their work first avoids doing it twice — and it
+also says clearly where this port is **ahead**.
+
+[`rea/02-notes/upstream-parallel-work.md`](rea/02-notes/upstream-parallel-work.md)
+is the survey: the official installation, the tested feature status, the
+audio configuration, the parallel NixOS port, and the upstreaming of this
+port's own libcamera focus patches.
+
+Two findings worth stating up front:
+
+- The upstream port has the **camera, the infrared transmitter and the GPS
+  broken** too. This port is working on the same four areas the
+  community has not solved: the camera, the microphones, the USB-C audio
+  and the infrared.
+- This port's two libcamera focus patches are **being merged upstream**,
+  by other people, along the same design. The end state is the upstream
+  one, not a local patch.
 
 ## Current reverse-engineering focus
 

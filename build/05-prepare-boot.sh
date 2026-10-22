@@ -22,7 +22,14 @@ mkdir -p "$BOOTDIR" "$OUT"
 
 say "u-boot para o painel $PANEL"
 
-# Which panel is this phone? The stock Android build.prop says so.
+# Which panel is this phone? The wiki's method is the best one: the
+# kernel logs it.
+#
+#     adb wait-for-device && adb reboot && adb logcat | grep "panel name is"
+#
+# It prints "panel name is Huaxing" or "panel name is Tianma". The
+# device name is a second opinion: surya for the Huaxing, surya_tianma
+# for the Tianma.
 if [ -f "$PROJECT/android/extracted/rootfs/vendor/build.prop" ]; then
     model=$(grep -E 'ro.product.(model|device)' "$PROJECT/android/extracted/rootfs/vendor/build.prop" | head -2)
     echo "  $model"
@@ -83,7 +90,11 @@ ls -lh "$BOOTDIR"/*.img "$BOOTDIR"/avbtool.py 2>/dev/null || true
 echo
 echo "  Painel: $PANEL"
 echo
-echo "Para saber qual é o seu painel, com o Android a correr:"
+echo "Para confirmar o painel, com o Android a correr:"
+echo "    adb wait-for-device && adb reboot && adb logcat | grep \"panel name is\""
+echo "    # imprime 'panel name is Huaxing' ou 'panel name is Tianma'"
+echo
+echo "Como segunda opinião, o nome do dispositivo:"
 echo "    adb shell getprop ro.product.device"
 echo "    # surya  → Huaxing"
 echo "    # surya_tianma → Tianma"

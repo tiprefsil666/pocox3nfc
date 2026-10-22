@@ -20,10 +20,38 @@ case "$R" in ''|*[!0-9]*) echo "cannot read the kernel release ($REL)"; exit 1 ;
 [ "$R" -ge 93 ] || { echo "kernel $REL: this configuration needs r93 or later (kernel/)"; exit 1; }
 
 say "ALSA UCM (audio routing and call volume)"
-ssh "$HOST" 'sudo mkdir -p /usr/share/alsa/ucm2/conf.d/sm8250'
-scp -q "$HERE"/device/audio/*.conf "$HOST":/tmp/
-ssh "$HOST" 'sudo mv /tmp/POCO-X3.conf /tmp/HiFi.conf /tmp/VoiceCall.conf \
-                     /usr/share/alsa/ucm2/conf.d/sm8250/'
+# The official alsa-ucm-conf-qcom-sm7150 package, which the
+# device-qcom-sm7150 package pulls in, installs its own files:
+#
+#   /usr/share/alsa/ucm2/Xiaomi/surya/HiFi.conf    the speaker profile
+#   /usr/share/alsa/ucm2/conf.d/sm8250/POCO X3.conf  the use case that
+#                                                     points at it
+#
+# Note the space in "POCO X3.conf" — not our "POCO-X3.conf". The use
+# case's "File" directive points at /Xiaomi/surya/, so that is where our
+# profile has to go. Writing ours into conf.d/sm8250/ instead would
+# leave two "HiFi" use cases competing, and the "Voice Call" one
+# pointing at a file that was never installed.
+#
+# So the profile goes where the official one lives, and the use case
+# REPLACES the official one under its own name — "POCO X3.conf", with a
+# space. That is the name the package's symlinks
+# (xiaomi-XiaomiPOCOX3NFCHuaxing.conf and the Tianma ones) point at, so
+# writing over it keeps the symlinks working and leaves exactly one
+# "HiFi" use case.
+UCM=/usr/share/alsa/ucm2
+ssh "$HOST" "sudo mkdir -p $UCM/Xiaomi/surya $UCM/conf.d/sm8250"
+scp -q "$HERE"/device/audio/HiFi.conf "$HOST":/tmp/
+scp -q "$HERE"/device/audio/VoiceCall.conf "$HOST":/tmp/
+scp -q "$HERE"/device/audio/POCO-X3.conf "$HOST":/tmp/
+ssh "$HOST" "sudo mv /tmp/HiFi.conf /tmp/VoiceCall.conf $UCM/Xiaomi/surya/ && \
+             sudo mv /tmp/POCO-X3.conf '$UCM/conf.d/sm8250/POCO X3.conf' && \
+             sudo rm -f '$UCM/conf.d/sm8250/POCO-X3.conf' \
+                         '$UCM/conf.d/sm8250/HiFi.conf' \
+                         '$UCM/conf.d/sm8250/VoiceCall.conf'"
+
+# Report what is there, so a clash is visible rather than silent.
+ssh "$HOST" "ls -1 '$UCM/conf.d/sm8250/' '$UCM/Xiaomi/surya/' 2>/dev/null | grep -iE 'poco|hifi|voice' || true"
 
 say "wireplumber (Bluetooth calls)"
 ssh "$HOST" 'mkdir -p ~/.config/wireplumber/wireplumber.conf.d \

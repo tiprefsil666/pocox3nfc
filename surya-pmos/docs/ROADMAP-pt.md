@@ -12,6 +12,40 @@ espanhol).
 
 ---
 
+## Parte 0 — O que já está feito por outros
+
+> ⚠️ **Ler esta parte antes de começar a escrever código.** O projecto
+> `sm7150-mainline` já porta este mesmo SoC para o postmarketOS, e há
+>bloqueadores que estão resolvidos lá. A análise completa, com as
+> fontes, está em
+> [`rea/02-notes/upstream-parallel-work.md`](../../rea/02-notes/upstream-parallel-work.md).
+
+O que a comunidade já testou:
+
+| | |
+|---|---|
+| **A instalação oficial** | [`wiki.nura.eco/wiki/Qualcomm_SM7150_(qcom-sm7150)`](https://wiki.nura.eco/wiki/Qualcomm_SM7150_(qcom-sm7150)) — o pacote de dispositivo é o **genérico `qcom-sm7150`**, o U-Boot é *chainloaded* pelo bootloader de fábrica, e a raiz vai para `userdata` |
+| **O estado das funções** | a wiki do [surya](https://wiki.nura.eco/wiki/Xiaomi_POCO_X3_NFC_(xiaomi-surya)) tem a tabela testada: câmara **quebrada**, **IR TX quebrado**, **GPS quebrado**, áudio **parcial**, bateria **parcial**, e everything else a funcionar |
+| **A configuração de áudio** | o pacote `alsa-ucm-conf-qcom-sm7150`, do mesmo projecto — ⚠️ **colide com a nossa** (§4.5) |
+| **A árvore de dispositivo da fábrica** | publicada em `sm7150-mainline/downstream-fdt` — é a **contra-prova** das notas de análise |
+| **Imagens semanais** | `sm7150-mainline/nightly-builds` — uma imagem por semana, para cada dispositivo |
+| **Um port NixOS** | `codeberg.org/ungeskriptet/nixos-qcom`, com **um dispositivo por painel** |
+| **Os nossos próprios patches de foco** | estão a ser **aceites no upstream do libcamera** (§4.8) |
+
+Duas conclusões que mudam o plano:
+
+1. **A câmara, a IR e o GPS estão broken no port oficial também.** O que
+   este port tem de fazer é melhorá-los, não tê-los de primeira. O port
+   oficial é a **referência para o que funciona** — ecrã, toque, modem,
+   NFC, sensores, bootloader.
+2. **Os dois "N" que faltam na tabela de componentes e que o mainline já
+   tem driver** são exactamente os dois com que este port se tem
+   debatido: os **microfones WCD9375** e o **áudio USB-C FSA4480**. São
+   trabalho de **device tree**, não de driver — o que muda completamente a
+   sua dimensão.
+
+---
+
 ## Parte 1 — O que falta, por subsistema
 
 ### 1.1 Bloqueadores de build
@@ -250,22 +284,56 @@ make LLVM=1 ARCH=arm64 LOCALVERSION= INSTALL_MOD_STRIP=1 \
 
 ### 2.6 Gravar no telefone
 
-Ver o `README.md` §"Flashing it onto the phone" para o procedimento completo
-(u-boot, vbmeta vazio, `fastboot erase dtbo`). O essencial:
+> 📌 **O procedimento oficial, testado pela comunidade**, está na
+> [wiki.nura.eco](https://wiki.nura.eco/wiki/Qualcomm_SM7150_(qcom-sm7150))
+> e é mais curto do que o que estava aqui. O `build/40-flash.sh` já o
+> segue.
 
 ```sh
-fastboot flash boot u-boot-sm7150-xiaomi-surya-huaxing.img
+# o u-boot do painel certo deste telefone
 fastboot erase dtbo
+fastboot flash boot u-boot-sm7150-xiaomi-surya-<painel>.img
+
+# e a raiz
+$PMB flasher flash_rootfs
+```
+
+Três coisas que a wiki oficial diz e que não são óbvias:
+
+- **O pacote de dispositivo é o genérico `qcom-sm7150`**, não
+  `device-xiaomi-surya`. Os pacotes por dispositivo foram removidos em
+  Março de 2025, porque o U-Boot passa a escolher a device tree sozinho.
+- **O U-Boot é *chainloaded* pelo bootloader de fábrica.** O bootloader
+  primário não é substituído: o U-Boot vai para a partição `boot` e a
+  Xiaomi arranca-o. (O bootloader continua a ter de estar desbloqueado.)
+- **A raiz vai para `userdata`**, e o **esquema de partições mudou
+  completamente** com a passagem para o U-Boot. O esquema antigo e o novo
+  são incompatíveis e **não há migração** — é uma instalação limpa ou
+  nada. Ver a
+  [nota de migração](https://postmarketos.org/edge/2025/03/09/sm7150-generic-migration/).
+
+E o `vbmeta` vazio, que o `README.md` antigo pedia:
+
+```sh
 fastboot flash vbmeta        vbmeta.img        --disable-verity --disable-verification
 fastboot flash vbmeta_system vbmeta_system.img --disable-verity --disable-verification
-$PMB flasher flash_rootfs
-fastboot reboot
 ```
+
+A wiki oficial **não** o menciona. Com o bootloader desbloqueado e o
+U-Boot em chainload, a verificação do AVB já não é imposta — mas gravá-lo
+não faz mal e é a garantia. O `build/40-flash.sh` faz os dois, e avisa
+que o vbmeta é opcional.
 
 > ⚠️ O `dtbo` do factory **tem de ser apagado** ou briga com o do mainline.
 >
 > ⚠️ **Este telefone nunca se desliga de verdade**: o u-boot reinicia-o, mesmo
 > a partir do seu próprio menu. Não ler um reinício como falha de desligar.
+>
+> 📌 **O UART deste telefone é de 1.8 V**, não 3.3 V. Um adaptador TTL de
+> 3.3 V precisa de um divisor de tensão, ou o GPIO do telefone fica em
+> risco. O pino de RX é puxado para cima por software no Linux e no
+> U-Boot, mas para um log que sobreviva a um reinício o pull-up tem de
+> ser de hardware.
 
 ### 2.7 Instalar a configuração do dispositivo
 
@@ -452,19 +520,38 @@ O que *é* possível fazer:
    percurso que o `docs/blobs.md` descreve para o resto.
 3. Escrever o script de extracção, para quem tiver o telefone.
 
-### 4.5 O `mixer_paths` — qual dos quatro é o deste board
+### 4.5 O `mixer_paths` — **resolvido: `mixer_paths_wcd9375.xml`**
 
-O HAL `audio.primary.sm6150.so` escolhe em runtime. As quatro afinações
-diferem mais do que em valores (ver `rea/02-notes/audio-mixer-paths.md`):
+> ✅ **A pergunta original desta secção tem resposta.** A device tree da
+> fábrica, publicada pelo projecto upstream em
+> `sm7150-mainline/downstream-fdt`, dá o modelo da placa de som:
+>
+> ```
+> sm6150_snd: sound {
+>     compatible = "qcom,sm6150-asoc-snd";
+>     qcom,model = "sm6150-wcd9375-snd-card";
+> ```
+>
+> O HAL escolhe o ficheiro por esse nome: `sm6150-<variante>-snd-card` →
+> `mixer_paths_<variante>.xml`. As variantes que o HAL conhece batem
+> exactamente com os quatro ficheiros que existem.
+>
+> Portanto o board é um **`wcd9375`**, e o `mixer_paths_idp.xml` é de
+> outro aparelho — apesar de o `model` de topo da device tree ser
+> `"IDP"`, que é uma pista falsa: é o nome do board, não o da placa de
+> som.
 
-| Ficheiro | Amplificador |
-|---|---|
-| `mixer_paths_wcd9375.xml` | TAS2562 |
-| `mixer_paths_idp.xml` | TAS2562 |
-| `mixer_paths_qrd.xml` | WSA — **este board não tem** |
-| `mixer_paths_tavil.xml` | nenhum |
+As quatro afinações, e o que cada uma é (ver
+`rea/02-notes/audio-mixer-paths.md`):
 
-Determinar qual é usado:
+| Ficheiro | Amplificador | Este board |
+|---|---|---|
+| **`mixer_paths_wcd9375.xml`** | TAS2562 | ✅ **é este** |
+| `mixer_paths_idp.xml` | TAS2562 | ❌ outro aparelho |
+| `mixer_paths_qrd.xml` | WSA | ❌ este board não tem |
+| `mixer_paths_tavil.xml` | nenhum | ❌ |
+
+A confirmação em runtime continua a ser útil, e é a mesma:
 
 ```sh
 # no telefone, em runtime
@@ -472,6 +559,49 @@ adb shell getprop | grep -iE 'audio|mixer|platform'
 # e o log do HAL na inicialização
 adb logcat -b all | grep -iE 'mixer_paths|audio_platform'
 ```
+
+#### ⚠️ 4.5.1 O conflito com o `alsa-ucm-conf` oficial — **a resolver antes do próximo flash**
+
+O projecto upstream tem a sua própria configuração de áudio, no pacote
+`alsa-ucm-conf-qcom-sm7150`, que o `device-qcom-sm7150` traz como
+dependência. Para este board tem:
+
+- `ucm2/Xiaomi/surya/HiFi.conf` — o perfil do altifalante;
+- `ucm2/conf.d/sm8250/POCO X3.conf` — o use case que aponta para ele;
+- symlinks com os nomes do fabricante (`xiaomi-XiaomiPOCOX3NFCHuaxing.conf`
+  e o do Tianma), "para compatibilidade com o U-Boot".
+
+O nosso `scripts/install-on-device.sh` escreve `HiFi.conf`, `POCO-X3.conf`
+e `VoiceCall.conf` em `/usr/share/alsa/ucm2/conf.d/sm8250/`.
+
+**O resultado, numa build actual, é este:**
+
+| Ficheiro | De onde | O que acontece |
+|---|---|---|
+| `conf.d/sm8250/POCO X3.conf` | oficial | define o use case "HiFi" → `/Xiaomi/surya/HiFi.conf` (o perfil **simples**, de 18 linhas) |
+| `conf.d/sm8250/POCO-X3.conf` | nosso | define "HiFi" → `/Xiaomi/surya/HiFi.conf` **e** "Voice Call" → `/Xiaomi/surya/VoiceCall.conf` |
+| `conf.d/sm8250/HiFi.conf` | nosso | carregado como use case "HiFi" **à partida** — mas o `File` dos use cases aponta para `/Xiaomi/surya/`, e é lá que o perfil vai |
+| `Xiaomi/surya/VoiceCall.conf` | **ninguém** | o "Voice Call" aponta para um ficheiro que nunca foi instalado |
+
+Ou seja: **dois use cases "HiFi"** — um o simples do upstream, outro o
+nosso — e **um "Voice Call" que aponta para o vazio**. A chamada pode
+não ter áudio nenhum, e o routing estéreo pode não ser o nosso.
+
+**Isto tem de ser reconciliado.** As opções, por ordem de preferência:
+
+1. **Instalar por cima, no sítio certo.** O `POCO X3.conf` oficial é
+   `POCO X3.conf` (com espaço); o nosso é `POCO-X3.conf` (com hífen). E o
+   perfil tem de ir para `Xiaomi/surya/HiFi.conf`, não para
+   `conf.d/sm8250/`. Escrever lá resolve os dois de uma vez, e o
+   `POCO X3.conf` oficial passa a ser o ponto de entrada, com o
+   "Voice Call" a mais.
+2. **Remover o `alsa-ucm-conf-qcom-sm7150`** e tratar a configuração
+   inteira como um overlay nosso. Mais simples, mas perde-se o que o
+   upstream já tem e vai mantendo.
+3. **Enviar o nosso perfil para o upstream** e usar o pacote oficial
+   como está. O que é o correcto a prazo, e o que a §4.8 sugere que
+   está a acontecer.
+
 
 ### 4.6 A IR de controlo remoto pode não existir
 
@@ -482,6 +612,15 @@ O HAL de IR do Android conduz `/dev/spidev0.1`, mas:
   nenhum do DTBO;
 - **o kernel de fábrica não tem driver de IR** — nenhum dos 38 módulos do
   vendor, e nada no `kernel.uncompressed`.
+
+> 📌 **Confirmado pelo projecto upstream, de forma independente.** O
+> `sm7150-mainline/downstream-fdt` publica a device tree da fábrica, e o
+> `fdt-surya` diz o mesmo: `spi@a80000` — a SPI0 que o HAL de IR conduz —
+> está `disabled`, e a **única** SPI com um dispositivo é a `spi@880000`,
+> o ecrã táctil NT36672C. Não há nenhum nó de IR nessa árvore.
+>
+> A wiki do projecto lista a função como **"IR TX: Broken"** — a resposta
+> testada da comunidade à mesma pergunta.
 
 A IR que **existe** é a da câmara: o LED IR e o filtro IR-cut, nos GPIO 73 e
 74, com o driver `qcom,camera-ir-led` que o mainline não tem.
@@ -506,6 +645,56 @@ O boot precisa de:
 Isto é um trabalho grande, e a parte difícil não é o driver: é o download
 dos patches e da calibração, que precisa do modem e do codec envolvidos no
 arranque, na ordem certa, com o tipo de chip certo.
+
+### 4.8 Os nossos patches de foco estão a ser aceites no upstream — **mudar de estratégia**
+
+> 📌 **Este é o achado mais importante desta secção.** Os dois patches de
+> `packages/libcamera/` — o foco manual (0004) e o automático (0005) —
+> foram propostos no upstream do libcamera, por outro caminho, e **já
+> foram fundidos**.
+
+| Commit upstream | Data | O que é |
+|---|---|---|
+| [`7231d3177`](https://gitlab.freedesktop.org/camera/libcamera/-/commit/7231d3177) `software_isp: Add focus control` | 2026-02-26 | Vasiliy Doylov — **a mesma abordagem do nosso 0004**: o sinal `setSensorControls` ganha um argumento `lensControls`, aparece o algoritmo `Af` em `src/ipa/simple/algorithms/af.cpp`, o `- Af:` entra no `uncalibrated.yaml`, e o pipeline simple chama `focusLens->setFocusPosition()` |
+| [`bfcd9e133`](https://gitlab.freedesktop.org/camera/libcamera/-/commit/bfcd9e133) `libcamera: software_isp: Add variance to stats` | 2026-10-21 | Milan Zamazal — **a medida de nitidez que o nosso 0005 calcula**, chamada "variance" no upstream |
+| [`a594b8900`](https://gitlab.freedesktop.org/camera/libcamera/-/commit/a594b8900) `ipa: softisp: Add Af algorithm` | 2026-10-21 | Milan Zamazal — o algoritmo `Af` para a software ISP |
+| [`9d1793335`](https://gitlab.freedesktop.org/camera/libcamera/-/commit/9d1793335) `libcamera: software_isp: Add autofocus controls` | 2026-10-21 | Milan Zamazal — os controlos da lente circulam, e os valores de foco são lidos e escritos |
+
+A revisão está na
+[arquivo do libcamera-devel](https://lists.libcamera.org/pipermail/libcamera-devel/2026-February/057562.html),
+com o maintainer do libcamera (Milan Zamazal, da Red Hat) a fazer a
+revisão.
+
+**O upstream está exactamente no ponto onde o nosso 0005 está.** A
+mensagem do commit `a594b8900` diz isso com todas as letras: *"The
+algorithm is not enabled yet because there are no autofocus stats
+computed."* A variance já está nas estatísticas, mas nada a calcula
+ainda. O nosso 0005 calcula uma medida de nitidez e usa-a para mexer na
+lente; o upstream tem a canalização e espera pela mesma medição.
+
+**Consequências para o plano:**
+
+1. **O 0005 não é um patch para ficar.** É uma implementação local de
+   algo que o upstream está a fazer. O estado final correcto é o upstream.
+2. **O 0004 pode ser deitado fora assim que houver uma release com o
+   `7231d3177`.**
+3. **O overlay fixa o libcamera 0.7.1 e o pmaports actual está no
+   0.7.2** — ou seja, o overlay **desactualiza** o libcamera numa build
+   actual. A tag mais recente do upstream é a **v0.7.2**, e o trabalho do
+   foco ainda **não está em nenhuma release**: está em `main`.
+4. **Decisão a tomar:** continuar com os patches locais até sair a
+   0.7.3, ou migrar já para `main` e portar o resto.
+
+**Enquanto isso, o overlay fica como está** — os patches foram
+verificados contra o 0.7.1, e o commit da base (`4b25f699`, "upgrade to
+0.7.1") tem de ser o que a receita espera. É o `20-overlay.sh` que
+trata disso, e o §4.5.1 do `build/README.md` explica.
+
+Para referência, o trabalho de foco do Pavel Machek para o Librem 5 está
+em `gitlab.com/tui/libcamera`, branch `l5`, e o
+[fairphone6-wide-camera-linux](https://github.com/nondescriptpointer/fairphone6-wide-camera-linux)
+é a referência mais próxima de um port de câmara que funcione de
+verdade: pipeline completo, software ISP, auto-exposição e AWB.
 
 ---
 

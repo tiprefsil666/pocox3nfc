@@ -87,6 +87,19 @@ But:
 > look for the LED physically, and check whether `ir-spi-led` appears
 > anywhere in the running device tree.
 
+> 📌 **Independently confirmed by the upstream project.** The
+> `sm7150-mainline/downstream-fdt` repository publishes the device tree of
+> the stock firmware of every SM7150 device, and its `fdt-surya` says the
+> same thing: `spi@a80000` — the SPI0 that the infrared HAL drives — has
+> `status = "disabled"`, and the **only** SPI with a device attached is
+> `spi@880000`, the NT36672C touchscreen. There is no infrared node in
+> that tree at all.
+>
+> The upstream wiki lists the feature as **"IR TX: Broken"**, which is
+> the community's tested answer to the same question.
+>
+> See [`upstream-parallel-work.md`](upstream-parallel-work.md).
+
 ### 3. The `qcom,ires-ua` property
 
 `qcom,ires-ua` appears in the device tree next to the LED properties of the
@@ -112,6 +125,13 @@ vendor.qti.hardware.fm@1.0-impl.so:
 The FM HAL is a thin HIDL client that hands packets to the Bluetooth HAL
 (`android.hardware.bluetooth@1.0-impl-qti.so`) and receives events back. The
 FM commands travel over HCI to the WCN, which does the actual RF.
+
+> 📌 **The device tree says the same thing.** The sound card of the stock
+> firmware carries `qcom,wcn-btfm = <0x01>`, which is the WCN's Bluetooth
+> FM transport. That is the FM, in the device tree, next to the sound card
+> it belongs to.
+>
+> See [`upstream-parallel-work.md`](upstream-parallel-work.md).
 
 The build properties say which chip and that FM is on:
 

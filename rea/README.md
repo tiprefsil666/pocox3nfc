@@ -106,6 +106,16 @@ Bluetooth HCI transport.
 - [`02-notes/ir-and-fm.md`](02-notes/ir-and-fm.md) — the camera's IR LED and its IR-cut filter, the remote control emitter that the firmware never enables, and the FM stack that rides on the Bluetooth chip.
 - [`04-tools/ir_fm_config.py`](04-tools/ir_fm_config.py) — the device tree and the vendor side, side by side.
 
+### The other work on this hardware
+
+The upstream `sm7150-mainline` project ports the same SoC to
+postmarketOS, and the community has already solved several of the things
+this workspace was working on. Reading their work first avoids doing it
+twice — and it also says clearly where this port is **ahead**.
+
+- [`02-notes/upstream-parallel-work.md`](02-notes/upstream-parallel-work.md) — the survey: the official installation, the tested feature status, the audio configuration, the NixOS port, and the upstreaming of this port's own libcamera patches.
+- The device tree of the stock firmware is published there, which is the cross-check for the analysis in these notes.
+
 ## Using REA on this tree
 
 ```sh

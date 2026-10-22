@@ -9,6 +9,12 @@ ser corridos um a um.
 > executada de ponta a ponta numa instalação limpa, e um flash que não
 > arranca não é um brick, mas perde-se o tempo a recuperar.
 
+> 📌 **Este é o procedimento oficial, testado pela comunidade.** A
+> [wiki do projecto](https://wiki.nura.eco/wiki/Qualcomm_SM7150_(qcom-sm7150))
+> é a referência, e o `40-flash.sh` segue-a. O survey do que já está
+> feito por outros está em
+> [`../rea/02-notes/upstream-parallel-work.md`](../rea/02-notes/upstream-parallel-work.md).
+
 ---
 
 ## O caminho todo
@@ -88,7 +94,14 @@ não é.
 ./05-prepare-boot.sh --panel tianma
 ```
 
-Para saber qual é o seu:
+Para saber qual é o seu, o método da wiki — o kernel diz:
+
+```sh
+adb wait-for-device && adb reboot && adb logcat | grep "panel name is"
+# imprime 'panel name is Huaxing' ou 'panel name is Tianma'
+```
+
+E como segunda opinião, o nome do dispositivo:
 
 ```sh
 adb shell getprop ro.product.device
@@ -98,7 +111,15 @@ adb shell getprop ro.product.device
 
 Os vbmeta são **gerados**, não copiados do firmware: um vbmeta vazio com
 o `avbtool` desliga o verified boot. O `avbtool` é Apache-2.0 e é um
-ficheiro só.
+ficheiro só. A wiki oficial não os menciona — com o bootloader
+desbloqueado e o U-Boot em chainload a verificação do AVB já não é
+imposta — mas gravá-los não faz mal e é a garantia.
+
+> 📌 **O U-Boot é *chainloaded* pelo bootloader de fábrica.** O bootloader
+> primário **não** é substituído: o U-Boot vai para a partição `boot` e a
+> Xiaomi arranca-o. E o **esquema de partições mudou completamente** com
+> a passagem para o U-Boot: o esquema antigo e o novo são incompatíveis e
+> **não há migração**. É uma instalação limpa ou nada.
 
 ### `10-fetch.sh` — o pmaports e o pmbootstrap
 
@@ -155,6 +176,18 @@ partir de `temp/`. O `libcamera` já lá está.
 > O conteúdo era o certo — o `sha512` batia — mas o nome não, e o build
 > procurava pelo nome. Corrigido: o ficheiro passou a ter o nome que a
 > receita sempre disse.
+
+> 📌 **Os dois patches de foco já estão a ser aceites no upstream do
+> libcamera.** O `7231d3177` ("software_isp: Add focus control") é a
+> mesma abordagem do nosso 0004, e o `bfcd9e133` ("software_isp: Add
+> variance to stats") é a medida de nitidez que o nosso 0005 calcula.
+> Estão fundidos, mas **ainda em nenhuma release** — a tag mais recente é
+> a v0.7.2, e o nosso overlay fixa a **0.7.1**, que o pmaports actual já
+> não usa.
+>
+> Isto é uma decisão a tomar, não um bug a corrigir: continuar com os
+> patches locais até sair a 0.7.3, ou migrar já para o `main` do
+> libcamera. Ver o roadmap §4.8.
 
 **A renormalização da série.** Os 140 patches trazem o seu `Subject:`
 com um contador inconsistente: 30 deles perderam-no (`[PATCH]` em vez de
@@ -257,6 +290,17 @@ serviços. Isso instala-se à parte:
 ```sh
 surya-pmos/scripts/install-on-device.sh <host-ou-ip>
 ```
+
+> ⚠️ **O `alsa-ucm-conf-qcom-sm7150` oficial colide com a nossa configuração
+> de áudio.** O pacote oficial — que o `device-qcom-sm7150` traz como
+> dependência — instala o perfil em `Xiaomi/surya/HiFi.conf` e o use case
+> em `conf.d/sm8250/POCO X3.conf` (**com espaço**). O nosso
+> `install-on-device.sh` escreve por cima de ambos, no sítio certo, e
+> limpa os ficheiros nossos que ficariam a mais.
+>
+> Sem isso, uma build actual fica com **dois use cases "HiFi"** a
+> competir, e o "Voice Call" a apontar para um `VoiceCall.conf` que nunca
+> foi instalado. Ver o roadmap §4.5.1.
 
 ---
 
