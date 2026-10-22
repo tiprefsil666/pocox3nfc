@@ -27,3 +27,10 @@ __pycache__/
 
 # Build output of the C reimplementation
 /rea/03-c-reimplementation/build/
+
+# The build pipeline's working directories. The pmbootstrap work folder
+# holds the chroot, the toolchain and the images, and it is tens of
+# gigabytes; the pmaports checkout is a large clone.
+/build-pmb/
+/postmarketos/upstream/
+/build/out/

@@ -6,6 +6,7 @@ Workspace and porting notes for postmarketOS on the Xiaomi POCO X3 NFC
 ## Contents
 
 - [`surya-pmos/`](surya-pmos/): device overlay, kernel patches, packages and port documentation.
+- [`build/`](build/): the build pipeline — the numbered steps that go from the sources to a flashable image, and the test battery.
 - [`postmarketos/verificacao-blobs/`](postmarketos/verificacao-blobs/): inventory of Android-derived components and postmarketOS port status.
 - [`postmarketos/INTEGRATION.md`](postmarketos/INTEGRATION.md): integration notes for the SM7150 prebuilt image.
 - [`postmarketos/PREBUILT.md`](postmarketos/PREBUILT.md): notes about the local prebuilt image, which is not included here.
@@ -14,6 +15,25 @@ Workspace and porting notes for postmarketOS on the Xiaomi POCO X3 NFC
 Android firmware, extracted proprietary blobs, and prebuilt disk images are
 excluded from this public repository. Use firmware obtained for your own
 device and follow the relevant vendor and project licenses.
+
+## Building and testing
+
+The build is a set of numbered steps, each of which can be run on its own:
+
+```sh
+cd build
+./run.sh --list
+./run.sh
+```
+
+The full recipe — the host dependencies, the pmbootstrap configuration, the
+flash and the seventeen tests — is in
+[`build/README.md`](build/README.md), and the roadmap that leads to it is
+in [`surya-pmos/docs/ROADMAP-pt.md`](surya-pmos/docs/ROADMAP-pt.md).
+
+> ⚠️ The build has not yet been run end to end on a clean installation.
+> Flash to a second partition, a second phone or a microSD card first, not
+> to the phone that works today.
 
 ## Current reverse-engineering focus
 

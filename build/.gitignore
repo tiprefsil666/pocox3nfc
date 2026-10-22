@@ -1,0 +1,12 @@
+# The build's own output: the logs, the manifest, the pmbootstrap version.
+out/
+
+# The pmbootstrap working directory. It holds the chroot, the toolchain and
+# the images, and it is tens of gigabytes. The path is outside this
+# directory, so it is ignored from the root .gitignore instead — git does
+# not accept ".." in a pattern.
+
+# The logs of a test run.
+*.log
+estado-*.txt
+btmon-*.txt
