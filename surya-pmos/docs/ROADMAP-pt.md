@@ -161,11 +161,22 @@ por fazer aqui, e a prioridade é a mesma.
 > Isto é o que distingue o estado deste port do oficial: a wiki classifica
 > os dois componentes como `N`, e aqui o WCD9375 **já funciona**.
 >
-> 📌 **S1 (a NFC) mudou de prioridade.** A wiki classifica a NFC como
-> **Works** no port oficial, e o device tree confirma o NXP NCI
-> (`compatible = "qcom,nq-nci"`). Ou seja: **isto já foi resolvido** por
-> outra via, e o que falta aqui ébringê-lo. Deixa de ser um "grande" e
-> passa a ser "descobrir como o official faz".
+> 📌 **S1 (a NFC) mudou de prioridade — e de tamanho.** A wiki classifica
+> a NFC como **Works** no port oficial, e o device tree confirma o NXP NCI
+> (`compatible = "qcom,nq-nci"`). O driver do mainline existe
+> (`drivers/nfc/nxp-nci`), e o **Nothing Phone (1)** — o mesmo SM7325, com
+> o mesmo bus QUPv3 SE2 e o mesmo endereço `0x28` — **já o faz no
+> mainline**.
+>
+> Deixa de ser um "grande" (escrever um driver) e passa a ser um
+> "pequeno" (ligar um nó): o bus `i2c2` está `disabled` no mainline, e o
+> nó é `nfc@28` com um `compatible` diferente e três GPIOs (o *enable*, o
+> *clock request* e o *interrupt*).
+>
+> A receita completa está em
+> [`rea/02-notes/nfc-wiring.md`](../../rea/02-notes/nfc-wiring.md). A
+> única coisa que não se sabe sem o aparelho é **qual dos GPIO 12 e 36 é
+> o *enable*** — a árvore de fábrica agrupa-os e não diz.
 
 ---
 

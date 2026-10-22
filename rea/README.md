@@ -106,6 +106,15 @@ Bluetooth HCI transport.
 - [`02-notes/ir-and-fm.md`](02-notes/ir-and-fm.md) — the camera's IR LED and its IR-cut filter, the remote control emitter that the firmware never enables, and the FM stack that rides on the Bluetooth chip.
 - [`04-tools/ir_fm_config.py`](04-tools/ir_fm_config.py) — the device tree and the vendor side, side by side.
 
+### The NFC, wired to the mainline
+
+The NFC is the same kind of job as the USB-C audio: the driver is
+upstream, a reference board on the same SoC family does it in the
+mainline, and the factory device tree has the addresses and the pins.
+What is missing is a node and an enabled I²C bus.
+
+- [`02-notes/nfc-wiring.md`](02-notes/nfc-wiring.md) — the chip, the factory tree, the `sm7325-nothing-spacewar` reference, and the recipe.
+
 ### What this port enables, and what is missing
 
 A comparison between the stock firmware's device tree and the one this
