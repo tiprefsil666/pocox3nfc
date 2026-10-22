@@ -85,6 +85,13 @@ kernel fork and postmarketOS' own packages. Nothing here replaces them — it is
 
 ## Building an image
 
+> 📌 **There is a script for this.** The [`../build/`](../build/) directory has the
+> whole pipeline as numbered steps that can be run one at a time, and it takes
+> care of the details below — including the ones that are easy to get wrong:
+> the `pmbootstrap` configuration, the `Subject:` counters of the patch series,
+> and the base of the `libcamera` recipe. The recipe it follows is in
+> [`../build/README.md`](../build/README.md).
+
 The kernel package here is an overlay on postmarketOS'. Copy it over the aport, then build as
 usual:
 
@@ -92,13 +99,22 @@ usual:
 git clone https://github.com/woodyst/surya-pmos
 cd surya-pmos
 
-# 1. Kernel: 140 patches, the recipe and the config
+# 1. Kernel: 140 patches, the recipe and the config.
+#    The package lives in device/community/ — it used to be in device/testing/,
+#    and pmaports moved it.
 PMAPORTS=$(pmbootstrap config aports)
 cp kernel/*.patch kernel/APKBUILD kernel/config-* \
-   "$PMAPORTS/device/testing/linux-postmarketos-qcom-sm7150/"
+   "$PMAPORTS/device/community/linux-postmarketos-qcom-sm7150/"
 
-# 2. libcamera with autofocus. Keep the patches already shipped by postmarketOS
-#    (0001-0003) — ours are 0004 and 0005 and the APKBUILD lists all of them.
+# 2. libcamera with autofocus.
+#    The recipe here is a fork of the pmaports one, so it needs the three
+#    patches the distribution had at the time, not the ones it has now: the
+#    distribution has since dropped the PinePhone patches, renamed the others
+#    and changed the sensor tuning files, and its current set does not match
+#    this recipe's checksums. The base is pmaports commit 4b25f699
+#    ("temp/libcamera: upgrade to 0.7.1"), which is what the recipe was
+#    written against. build/20-overlay.sh takes it from there.
+mkdir -p "$PMAPORTS/temp/libcamera"
 cp packages/libcamera/*.patch packages/libcamera/APKBUILD "$PMAPORTS/temp/libcamera/"
 
 # 3. libqmi with the GNSS constellation messages. Optional: everything else works
@@ -122,6 +138,22 @@ pmbootstrap install
 
 ⚠️ **If a package will not rebuild**, bump its `pkgrel`: pmbootstrap reports "up to date" and skips
 it otherwise.
+
+⚠️ **The `libcamera` overlay pins 0.7.1 and pmaports is on 0.7.2**, so building
+against the current tree downgrades libcamera. That is deliberate — the
+patches were verified against 0.7.1 — and it is the thing to revisit when
+upstream releases the focus-control work. See
+[`docs/ROADMAP-pt.md`](docs/ROADMAP-pt.md) §4.8.
+
+### The device package, and the audio configuration
+
+The device package is the **generic `qcom-sm7150`**, not
+`device-xiaomi-surya`: the per-device packages were removed from pmaports in
+March 2025, because U-Boot picks the device tree itself now.
+
+That package depends on `alsa-ucm-conf-qcom-sm7150`, which installs its own
+audio configuration — and it lands in the same place as ours. See
+[`docs/ROADMAP-pt.md`](docs/ROADMAP-pt.md) §4.5.1.
 
 ## Flashing it onto the phone
 

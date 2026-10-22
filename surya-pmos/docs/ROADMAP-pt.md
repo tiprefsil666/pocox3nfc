@@ -60,20 +60,40 @@ Duas conclusões que mudam o plano:
 
 ### 1.2 Hardware que ainda não foi testado
 
-| # | Item | Como testar | Critério de aceitação |
-|---|---|---|---|
-| H1 | **Carga rápida de 33 W** | carregador Xiaomi + `batterysecret` de produção | o `usbpd` marca `USB_HVDCP_3` e o `bq2597x` mostra o limite elevado |
-| H2 | **NFC** | encostar uma etiqueta | o `nfc` do mainline lê a etiqueta; hoje **não há driver** |
-| H3 | **Câmara frontal** (S5K3T2) | `pipewire` + `gst-launch` | sem pacotes, sem erro; hoje não há fluxo |
-| H4 | **Câmara de profundidade** (GC02M1B, OV02B1B) | idem | idem |
-| H5 | **A-GPS** | frio, ao ar livre | fix em <30 s; hoje o fix frio é lento |
-| H6 | **USB OTG** com teclado | ligar um teclado USB | o teclado escreve no terminal |
-| H7 | **Auriculares por cabo** (USB-C) | ligar auscultadores | audio bidireccional |
-| H8 | **Slot SIM 2** | inserir um segundo SIM | o modem detecta-a |
-| H9 | **TV-out** (via USB-C) | ligar um ecrã | não testado em lado nenhum |
-| H10 | **IR de controlo remoto** | ver [`rea/02-notes/ir-and-fm.md`](../../rea/02-notes/ir-and-fm.md) | ⚠️ **o firmware sugere que não existe** — confirmar fisicamente antes de escrever código |
-| H11 | **IR da câmara + filtro IR-cut** | abrir a câmara no escuro | o filtro muda de estado, a câmara vê em IR |
-| H12 | **Rádio FM** | ligar auscultadores, abrir a app de rádio | ⚠️ **todo o stack falta no mainline** |
+A coluna da direita é o estado **testado pela comunidade** — a wiki do
+projecto upstream. Serve de referência: onde diz "broken" lá, também está
+por fazer aqui, e a prioridade é a mesma.
+
+| # | Item | Como testar | Critério de aceitação | Upstream |
+|---|---|---|---|---|
+| H1 | **Carga rápida de 33 W** | carregador Xiaomi + `batterysecret` de produção | o `usbpd` marca `USB_HVDCP_3` e o `bq2597x` mostra o limite elevado | `N` |
+| H2 | **NFC** | encostar uma etiqueta | o `nfc` do mainline lê a etiqueta; hoje **não há driver** | ✅ Works |
+| H3 | **Câmara frontal** (S5K3T2) | `pipewire` + `gst-launch` | sem pacotes, sem erro; hoje não há fluxo | ❌ Broken |
+| H4 | **Câmara de profundidade** (GC02M1B, OV02B1B) | idem | idem | ❌ Broken |
+| H5 | **A-GPS** | frio, ao ar livre | fix em <30 s; hoje o fix frio é lento | ❌ Broken |
+| H6 | **USB OTG** com teclado | ligar um teclado USB | o teclado escreve no terminal | ✅ Works |
+| H7 | **Auriculares por cabo** (USB-C) | ligar auscultadores | audio bidireccional | ❌ `N` |
+| H8 | **Slot SIM 2** | inserir um segundo SIM | o modem detecta-a | ⚠️ quirky |
+| H9 | **TV-out** (via USB-C) | ligar um ecrã | não testado em lado nenhum | — |
+| H10 | **IR de controlo remoto** | ver [`rea/02-notes/ir-and-fm.md`](../../rea/02-notes/ir-and-fm.md) | ⚠️ **o firmware sugere que não existe** — confirmar fisicamente antes de escrever código | ❌ Broken |
+| H11 | **IR da câmara + filtro IR-cut** | abrir a câmara no escuro | o filtro muda de estado, a câmara vê em IR | — |
+| H12 | **Rádio FM** | ligar auscultadores, abrir a app de rádio | ⚠️ **todo o stack falta no mainline** | — |
+
+> 📌 **H7 (os auscultadores por cabo) é mais fácil do que parece.** O
+> FSA4480 — o controlador de áudio analógico do USB-C — está no mainline
+> (`drivers/usb/typec/mux/fsa4480.c`) e o device tree do factory tem o
+> `fsa4480-i2c-handle`. O que falta é a **device tree**, não um driver.
+> O mesmo vale para os **microfones WCD9375** (`wcd937x.c` no mainline).
+>
+> A tabela de componentes da wiki marca estes dois como `N` — e a nota
+> «supported in this driver» aponta para o driver do mainline. São
+> **as duas maiores oportunidades** que restam, e as mais baratas.
+
+> 📌 **H8: há uma peculiaridade conhecida.** A wiki avisa: *"Actually there is
+> an error unlocking SIM-Card on Slot1. If you get an (3)Internal error
+> AND you are already on edge (tqftpserv >= 1.2) you could try the
+> SD-Card/SIM-shared slot."* Se o teste do slot 2 falhar, **isto é
+> esperado** e não é um bug do port.
 
 ### 1.3 Software que falta escrever
 
@@ -88,12 +108,29 @@ Duas conclusões que mudam o plano:
 | S7 | **Driver do LED IR da câmara** (`qcom,camera-ir-led`) + o filtro IR-cut | pequeno | média |
 | S8 | **Driver IR por SPI** (`ir-spi-led`) + nó de DT | pequeno | **baixa** — confirmar primeiro se a peça existe |
 | S9 | **Stack de rádio FM** (transporte `radio_iris_transport`, HCI, patches via QMI, calibração por I²C) | **grande** | baixa |
+| **S10** | **Áudio USB-C (FSA4480)** — o driver do mainline já existe, falta a **device tree** | pequeno | **alta** |
+| **S11** | **Conciliar o `alsa-ucm-conf` oficial** com a nossa configuração de áudio | pequeno | **alta** — ver §4.5.1 |
+| **S12** | **Migrar os patches de foco do libcamera** para o upstream | médio | média — ver §4.8 |
 
 > **S4 é a próxima acção de maior rendimento.** O ficheiro
 > `rea/02-notes/audio-mixer-paths.md` tem o quadro completo: são 607 rotas, e o
 > mapa de microfones está lá. O que falta é transcrever o *routing table* do
 > vendor para o driver mainline do WCD9375. É trabalho de meio dia, não de
 > semanas.
+>
+> 📌 **E é agora a segunda acção de maior rendimento, depois de S11.** O
+> driver do FSA4480 está no mainline
+> (`drivers/usb/typec/mux/fsa4480.c`), o device tree do factory já tem o
+> `fsa4480-i2c-handle`, e a wiki classifica o componente como `N` — "não
+> ligado", não "sem driver". O mesmo se passa com o WCD9375
+> (`sound/soc/codecs/wcd937x.c`). São as duas tarefas onde a comunidade
+> ficou à beira e onde o ganho é imediato.
+>
+> 📌 **S1 (a NFC) mudou de prioridade.** A wiki classifica a NFC como
+> **Works** no port oficial, e o device tree confirma o NXP NCI
+> (`compatible = "qcom,nq-nci"`). Ou seja: **isto já foi resolvido** por
+> outra via, e o que falta aqui ébringê-lo. Deixa de ser um "grande" e
+> passa a ser "descobrir como o official faz".
 
 ---
 
@@ -704,6 +741,9 @@ Cada passo é pequeno, verificável e deixa o telefone a funcionar.
 
 ### Fase A — Desbloquear o build (sem tocar no telefone)
 
+> 📌 **Isto já está escrito como script**, em
+> [`build/`](../../build/). A fase A é `./build/run.sh`.
+
 | # | Tarefa | Entrega |
 |---|---|---|
 | A1 | `fetch-upstream.sh` com o `pmaports` do GitLab | `upstream/` preenchido |
@@ -714,6 +754,12 @@ Cada passo é pequeno, verificável e deixa o telefone a funcionar.
 
 > **A5 é o marco.** Se o kernel compilado daqui for bit a bit igual ao que
 > está implantado no telefone, a receita está correcta e o resto é testar.
+>
+> 📌 **A4 tem um atalho:** as imagens semanais do
+> [`sm7150-mainline/nightly-builds`](https://github.com/sm7150-mainline/nightly-builds)
+> já são o resultado de uma receita que funciona. Vale a pena gravar uma
+> delas **antes** de construir a nossa: dá um ponto de comparação e, se a
+> nossa falhar, diz se é a receita ou o overlay.
 
 ### Fase B — A receita de deploy, de ponta a ponta
 
@@ -726,6 +772,12 @@ Cada passo é pequeno, verificável e deixa o telefone a funcionar.
 
 > **B4 é o que o `pending.es.md` chama de "PENDIENTE MAYOR"** e o que
 > transforma "verificado no kernel e descrito no resto" em "reproduzível".
+>
+> ⚠️ **B1 tem de ser feito com o procedimento novo.** O esquema de
+> partições mudou com a passagem para o U-Boot: **é uma instalação limpa ou
+> nada** (§2.6). E o U-Boot é chainloaded pelo bootloader de fábrica, pelo
+> que o telefone tem de estar desbloqueado — mas o bootloader primário
+> **não** é substituído.
 
 ### Fase C — Testes por subsistema
 
@@ -735,14 +787,26 @@ Cada passo é pequeno, verificável e deixa o telefone a funcionar.
 | C2 | O routing table dos microfones, transcrito do `mixer_paths` | patch do WCD9375 |
 | C3 | A comutação de auscultadores a meio da chamada (§4.1) | ou arrumado, ou documentado |
 | C4 | A câmara frontal: C-PHY no receptor | patch do `csiphy` |
+| **C5** | **O áudio USB-C: ligar o FSA4480 à device tree** | auscultadores por cabo |
+| **C6** | **Conciliar o `alsa-ucm-conf` oficial** (§4.5.1) | um só "HiFi", e o "Voice Call" a funcionar |
+
+> 📌 **C5 é a mais barata de todas.** O driver do mainline existe, o
+> device tree do factory tem o `fsa4480-i2c-handle`, e a wiki classifica o
+> componente como `N` — não ligado, não sem driver. É o mesmo trabalho que
+> o C2, e com o mesmo resultado.
+>
+> 📌 **C6 tem de ser feita antes de C1**, ou os testes de áudio medem a
+> configuração errada. Ver §4.5.1.
 
 ### Fase D — O que falta escrever
 
 | # | Tarefa | Esforço |
 |---|---|---|
-| D1 | Driver NFC (PN557) — o formato do firmware já está decodificado | grande |
+| D1 | Driver NFC (PN557) — o formato do firmware já está decodificado | grande — ⚠️ mas a NFC já **funciona** no port oficial, ver §1.3 |
 | D2 | Handshake de carregamento rápido — precisa do `usbpd` do mainline | médio |
 | D3 | A-GPS no modem | médio |
+| **D4** | **Migrar o foco do libcamera para o upstream** (§4.8) | médio |
+| **D5** | **Câmara: porta C-PHY no receptor do SM7150** (§4.2) | **grande** — o único que é mesmo difícil |
 
 ---
 

@@ -16,6 +16,16 @@ The mainline IMX682 driver in the overlay was written by reading the vendor's
 blob. This note records the *format*, so the next person does not have to
 rediscover it, and so the tools can be checked against it.
 
+> 📌 **The camera is broken in the upstream port too.** The upstream
+> project's wiki lists **Camera: Broken**, and its component table marks
+> **all five** sensors as `N` — the IMX682 (main), the S5K3T2 (front), the
+> Hi-1337 (ultrawide), the Hi-259 (macro) and the OV02B1B (depth).
+>
+> So the work here is **ahead** of the community, not catching up with it.
+> The C-PHY receiver is the hard part, and it is hard for everybody.
+>
+> See [`upstream-parallel-work.md`](upstream-parallel-work.md).
+
 The blob is the vendor's description of a camera module: which sensor it
 carries, which I2C slave it lives on, the register tables that make up its
 power-up sequence, the lane assignment, the resolution tables, the EEPROM and

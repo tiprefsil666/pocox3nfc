@@ -31,6 +31,35 @@ files, not guessed:
 > `NF214` or `NF540` string; the identity comes from the configuration
 > files, which is where the vendor puts it.
 
+> 📌 **Confirmed by the device tree, from the upstream project.** The
+> `sm7150-mainline/downstream-fdt` repository publishes the stock device
+> tree, and the NFC node there is:
+>
+> ```
+> nq@28 {
+>     compatible = "qcom,nq-nci";
+>     reg = <0x28>;
+>     qcom,nq-irq = <0x178 0x25 0x00>;
+>     qcom,nq-ven = <0x178 0x0c 0x00>;
+>     ...
+>     interrupt-names = "nfc_irq";
+> };
+> ```
+>
+> The `nq-nci` name and the firmware's `NXP_NFC_DEV_NODE="/dev/nq-nci"`
+> agree.
+>
+> **And NFC works in the upstream port** — the wiki lists it as
+> **Works**, and the component table says *"NQX NCI NXP55303 (PN553
+> type)"*. The **PN557** and the **PN553** are the same family (the PN55x
+> series, NXP's second generation), and the upstream table is describing
+> the part as the *platform* names it, from the older naming. So the
+> driver is not a mystery: it is the mainline `nfc-nci` driver, wired to
+> this node.
+>
+> That changes the priority: the NFC is **not** a "write a driver from
+> scratch" job here — it is a **wire it up** job. See the roadmap, §1.3.
+
 ## The RF calibration
 
 `libnfc-nxp_RF.conf` holds the factory calibration of the antenna and the
