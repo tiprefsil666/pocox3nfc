@@ -106,6 +106,17 @@ Bluetooth HCI transport.
 - [`02-notes/ir-and-fm.md`](02-notes/ir-and-fm.md) — the camera's IR LED and its IR-cut filter, the remote control emitter that the firmware never enables, and the FM stack that rides on the Bluetooth chip.
 - [`04-tools/ir_fm_config.py`](04-tools/ir_fm_config.py) — the device tree and the vendor side, side by side.
 
+### The USB-C analogue audio
+
+The chip that switches a USB-C port over to an analogue headset — the
+**FSA4480** — is the cheapest thing left on the board. The mainline
+driver exists, the kernel configuration already enables it, the I²C bus
+is already up, and the factory device tree has the address, the enable
+pin and its configuration. Only the device tree is missing, and the
+recipe is written down step by step.
+
+- [`02-notes/usb-c-audio-fsa4480.md`](02-notes/usb-c-audio-fsa4480.md) — the chip, what the factory tree says, and the three hunks of device tree it takes.
+
 ### The other work on this hardware
 
 The upstream `sm7150-mainline` project ports the same SoC to

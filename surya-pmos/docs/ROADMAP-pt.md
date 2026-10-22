@@ -102,13 +102,13 @@ por fazer aqui, e a prioridade é a mesma.
 | S1 | **Driver NFC** (PN557) | grande | baixa — a NFC é um extra |
 | S2 | **Handshake de carregamento rápido** | médio | **média** — precisa do `usbpd` do mainline |
 | S3 | **Driver do amplificador TAS2562** | já existe (patches 0013–0016, 0022–0027) | — |
-| S4 | **Roteamento de microfones** do WCD9375 | pequeno | **alta** — está no `mixer_paths` |
+| S4 | **Roteamento de microfones** do WCD9375 — ⚠️ **o codec já está ligado** (patch 0031); falta transcrever o *routing table* | pequeno | **alta** — está no `mixer_paths` |
 | S5 | **A-GPS no modem** | médio | média |
 | S6 | **Portar o `mixer_paths` para mainline** | pequeno | **alta** |
 | S7 | **Driver do LED IR da câmara** (`qcom,camera-ir-led`) + o filtro IR-cut | pequeno | média |
 | S8 | **Driver IR por SPI** (`ir-spi-led`) + nó de DT | pequeno | **baixa** — confirmar primeiro se a peça existe |
 | S9 | **Stack de rádio FM** (transporte `radio_iris_transport`, HCI, patches via QMI, calibração por I²C) | **grande** | baixa |
-| **S10** | **Áudio USB-C (FSA4480)** — o driver do mainline já existe, falta a **device tree** | pequeno | **alta** |
+| **S10** | **Áudio USB-C (FSA4480)** — o driver do mainline já existe e a config já o activa; falta a **device tree** | pequeno | **alta** — a receita está em [`rea/02-notes/usb-c-audio-fsa4480.md`](../../rea/02-notes/usb-c-audio-fsa4480.md) |
 | **S11** | **Conciliar o `alsa-ucm-conf` oficial** com a nossa configuração de áudio | pequeno | **alta** — ver §4.5.1 |
 | **S12** | **Migrar os patches de foco do libcamera** para o upstream | médio | média — ver §4.8 |
 
@@ -118,13 +118,27 @@ por fazer aqui, e a prioridade é a mesma.
 > vendor para o driver mainline do WCD9375. É trabalho de meio dia, não de
 > semanas.
 >
-> 📌 **E é agora a segunda acção de maior rendimento, depois de S11.** O
-> driver do FSA4480 está no mainline
-> (`drivers/usb/typec/mux/fsa4480.c`), o device tree do factory já tem o
-> `fsa4480-i2c-handle`, e a wiki classifica o componente como `N` — "não
-> ligado", não "sem driver". O mesmo se passa com o WCD9375
-> (`sound/soc/codecs/wcd937x.c`). São as duas tarefas onde a comunidade
-> ficou à beira e onde o ganho é imediato.
+> 📌 **E é agora a segunda acção de maior rendimento, depois de S11.**
+> O **FSA4480** (áudio analógico do USB-C) tem o driver no mainline
+> (`drivers/usb/typec/mux/fsa4480.c`), a config do nosso kernel já o
+> activa (`CONFIG_TYPEC_MUX_FSA4480=y`), o bus I²C onde ele vive
+> (`i2c9`, o QUPv3 SE9) **já está ligado** pelo patch 0042, e a device
+> tree da fábrica dá tudo o resto: o endereço `0x43`, o pino do *enable*
+> (GPIO 42) e a sua configuração.
+>
+> **Falta só a device tree**, e a receita está escrita, passo a passo, em
+> [`rea/02-notes/usb-c-audio-fsa4480.md`](../../rea/02-notes/usb-c-audio-fsa4480.md).
+> A referência é a `sm8350-hdk` do mainline.
+>
+> 📌 **O WCD9375 já está ligado** — o patch 0031 põe os macros do LPASS,
+> os controladores SoundWire, o codec e o *DAI link* de captura, e o
+> patch 0034 e 0035 tratam do SoundWire e do pino de reset. O que falta
+> em S4 é a parte de **transcrever o *routing table* do vendor** para os
+> controlos do driver do mainline — não é ligar o codec, que já está
+> ligado.
+>
+> Isto é o que distingue o estado deste port do oficial: a wiki classifica
+> os dois componentes como `N`, e aqui o WCD9375 **já funciona**.
 >
 > 📌 **S1 (a NFC) mudou de prioridade.** A wiki classifica a NFC como
 > **Works** no port oficial, e o device tree confirma o NXP NCI
@@ -787,13 +801,15 @@ Cada passo é pequeno, verificável e deixa o telefone a funcionar.
 | C2 | O routing table dos microfones, transcrito do `mixer_paths` | patch do WCD9375 |
 | C3 | A comutação de auscultadores a meio da chamada (§4.1) | ou arrumado, ou documentado |
 | C4 | A câmara frontal: C-PHY no receptor | patch do `csiphy` |
-| **C5** | **O áudio USB-C: ligar o FSA4480 à device tree** | auscultadores por cabo |
+| **C5** | **O áudio USB-C: ligar o FSA4480 à device tree** (a receita está em [`rea/02-notes/usb-c-audio-fsa4480.md`](../../rea/02-notes/usb-c-audio-fsa4480.md)) | auscultadores por cabo |
 | **C6** | **Conciliar o `alsa-ucm-conf` oficial** (§4.5.1) | um só "HiFi", e o "Voice Call" a funcionar |
 
-> 📌 **C5 é a mais barata de todas.** O driver do mainline existe, o
-> device tree do factory tem o `fsa4480-i2c-handle`, e a wiki classifica o
-> componente como `N` — não ligado, não sem driver. É o mesmo trabalho que
-> o C2, e com o mesmo resultado.
+> 📌 **C5 é a mais barata de todas.** O driver do mainline existe, a
+> config do kernel já o activa, o bus I²C já está ligado, e a device tree
+> da fábrica dá o endereço, o pino e a configuração. **Falta a device
+> tree e nada mais.** A receita completa, com a referência do mainline
+> (`sm8350-hdk`), está em
+> [`rea/02-notes/usb-c-audio-fsa4480.md`](../../rea/02-notes/usb-c-audio-fsa4480.md).
 >
 > 📌 **C6 tem de ser feita antes de C1**, ou os testes de áudio medem a
 > configuração errada. Ver §4.5.1.
