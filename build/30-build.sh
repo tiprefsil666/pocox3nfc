@@ -87,7 +87,7 @@ EOF
 
     # Check that pmbootstrap agrees with what was written.
     say "o que o pmbootstrap leu"
-    $PMB status 2>&1 | sed 's/^/  /' || warn "o status falhou"
+    $PMB_NOSUDO status 2>&1 | sed 's/^/  /' || warn "o status falhou"
     echo
 }
 

@@ -18,3 +18,11 @@ clone_if_missing() {
 clone_if_missing https://github.com/sm7150-mainline/postmarketos.git upstream/sm7150-mainline-postmarketos
 clone_if_missing https://gitlab.postmarketos.org/postmarketOS/pmaports.git upstream/pmaports
 clone_if_missing https://github.com/woodyst/surya-pmos.git upstream/surya-pmos
+
+# pmbootstrap itself, pinned to the version the build was written against.
+# Its 3.12.1 `init` is interactive, which is why build/30-build.sh writes
+# the configuration directly instead of answering it.
+if [ ! -d pmbootstrap/.git ]; then
+    git clone --depth=1 --branch 3.12.1 \
+        https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git pmbootstrap
+fi

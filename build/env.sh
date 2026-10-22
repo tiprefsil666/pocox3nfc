@@ -26,6 +26,11 @@ PMB_CFG=${PMB_CFG:-$BUILD/out/pmbootstrap_v3.cfg}
 # version accepts as a global option.
 PMB=${PMB:-sudo python3 $PMB_SRC/pmbootstrap.py -c $PMB_CFG}
 
+# The same, without sudo. A few commands — `status`, for one — do not
+# need root, and asking for a password to print the configuration is
+# needlessly annoying.
+PMB_NOSUDO=${PMB_NOSUDO:-python3 $PMB_SRC/pmbootstrap.py -c $PMB_CFG}
+
 # The pmaports checkout, and the pmbootstrap working directory. Both have to
 # be absolute: pmbootstrap stores them in its configuration and uses them in
 # every later command.

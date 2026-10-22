@@ -100,12 +100,23 @@ Os vbmeta são **gerados**, não copiados do firmware: um vbmeta vazio com
 o `avbtool` desliga o verified boot. O `avbtool` é Apache-2.0 e é um
 ficheiro só.
 
-### `10-fetch.sh` — o pmaports
+### `10-fetch.sh` — o pmaports e o pmbootstrap
 
-Um clone raso do [pmaports](https://gitlab.postmarketos.org/postmarketOS/pmaports.git).
-É a maior dependência e a mais lenta. O commit usado fica registado em
-`out/pmaports-version.txt`, para qualquer imagem poder ser rastreada até à
-origem.
+Dois clones rasos:
+
+| | De onde | Versão |
+|---|---|---|
+| pmaports | [gitlab.postmarketos.org/postmarketOS/pmaports](https://gitlab.postmarketos.org/postmarketOS/pmaports.git) | `main` |
+| pmbootstrap | [gitlab.postmarketos.org/postmarketOS/pmbootstrap](https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git) | **`3.12.1`**, fixada |
+
+O pmbootstrap **não está neste repositório** — é uma ferramenta de
+terceiros — e a versão importa: o `init` do 3.12.1 é interactivo, e é
+por isso que o `30-build.sh` escreve a configuração em vez de a
+responder. Uma versão diferente pode tratar as coisas de outra maneira, por isso
+o tag é fixado e verificado.
+
+O commit usado fica registado em `out/pmaports-version.txt`, para
+qualquer imagem poder ser rastreada até à origem.
 
 ### `20-overlay.sh` — os quatro overlays
 
@@ -340,10 +351,14 @@ $PMB zap
 
 Esta pasta foi escrita contra o pmbootstrap 3.12.1 e contra o pmaports
 actual, e os passos que não precisam de root foram corridos até ao fim:
-a verificação do host, o download do u-boot, a geração dos vbmeta, o clone
-do pmaports, a cópia dos overlays com a renormalização da série, e a
-escrita da configuração do pmbootstrap (confirmada com `pmbootstrap
-status`).
+a verificação do host, o download do u-boot, a geração dos vbmeta, os
+clones do pmaports e do pmbootstrap, a cópia dos overlays com a
+renormalização da série, e a escrita da configuração do pmbootstrap
+(confirmada com `pmbootstrap status`).
+
+A cadeia completa — `10-fetch` → `20-overlay` → `30-build --config` — foi
+corrida a partir de um **clone limpo** do repositório, e é isso que a
+secção acima descreve.
 
 **O build completo — o `checksum` e o `install` — ainda não foi corrido de
 ponta a ponta.** Precisa de root, e de um host com as dependências

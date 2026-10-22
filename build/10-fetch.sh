@@ -15,8 +15,41 @@ PIN=${1:-}
 
 UPSTREAM=$PROJECT/postmarketos/upstream
 PMAPORTS_URL=https://gitlab.postmarketos.org/postmarketOS/pmaports.git
+PMB_SRC=$PROJECT/postmarketos/pmbootstrap
+PMB_URL=https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
 
 mkdir -p "$UPSTREAM" "$OUT"
+
+# ---------------------------------------------------------------------------
+# The pmbootstrap itself.
+#
+# It is not in this repository: it is a third-party tool, and the version
+# matters. This one is the 3.12.1, whose `init` is interactive — which is
+# why 30-build.sh writes the configuration directly instead of answering
+# it. A different version may behave differently, so the tag is pinned.
+
+say "pmbootstrap"
+PMB_TAG=${PMB_TAG:-3.12.1}
+if [ -f "$PMB_SRC/pmbootstrap.py" ]; then
+    V=$(python3 "$PMB_SRC/pmbootstrap.py" --version 2>/dev/null | tail -1)
+    ok "já está em $PMB_SRC ($V)"
+    if [ "$V" != "$PMB_TAG" ]; then
+        warn "a versão é $V, e o build foi escrito para a $PMB_TAG"
+    fi
+else
+    say "a clonar o pmbootstrap $PMB_TAG (pode demorar uns minutos)"
+    # The tag is annotated. Fetching it by name and checking out the
+    # peeled commit avoids the note git prints about the detached HEAD.
+    mkdir -p "$PMB_SRC"
+    git -C "$PMB_SRC" init -q
+    git -C "$PMB_SRC" remote add origin "$PMB_URL"
+    git -C "$PMB_SRC" fetch -q --depth=1 origin "refs/tags/$PMB_TAG:refs/tags/$PMB_TAG" \
+        || die "não foi possível buscar o tag $PMB_TAG de $PMB_URL"
+    PMB_COMMIT=$(git -C "$PMB_SRC" rev-parse "$PMB_TAG^{}" 2>/dev/null || true)
+    [ -n "$PMB_COMMIT" ] || die "o tag $PMB_TAG não se desenrola num commit"
+    git -C "$PMB_SRC" -c advice.detachedHead=false checkout -q "$PMB_COMMIT"
+    ok "clonado ($PMB_TAG, $PMB_COMMIT)"
+fi
 
 say "pmaports"
 
@@ -74,6 +107,7 @@ fi
     echo "pmaports:   $(git -C "$PMAPORTS" rev-parse HEAD)"
     echo "pmaports:   $(git -C "$PMAPORTS" log -1 --format=%cd --date=iso)"
     echo "branch:     $(git -C "$PMAPORTS" rev-parse --abbrev-ref HEAD)"
+    echo "pmbootstrap: $(python3 "$PMB_SRC/pmbootstrap.py" --version 2>/dev/null | tail -1)"
     echo "fetched:    $(date -Is)"
 } | tee "$OUT/pmaports-version.txt"
 
